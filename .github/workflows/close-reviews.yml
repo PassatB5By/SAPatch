@@ -1,0 +1,70 @@
+name: Auto Close Reviews
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  manage-review:
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.issue.title, '[REVIEW]') || contains(github.event.issue.labels.*.name, 'отзыв') || contains(github.event.issue.labels.*.name, 'feedback')
+    steps:
+      - name: Process, label and close review
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issue_number = context.issue.number;
+
+            // 1. Ensure label "отзыв" exists
+            try {
+              await github.rest.issues.getLabel({
+                owner,
+                repo,
+                name: 'отзыв'
+              });
+            } catch (err) {
+              try {
+                await github.rest.issues.createLabel({
+                  owner,
+                  repo,
+                  name: 'отзыв',
+                  color: '00e5ff',
+                  description: 'Отзывы пользователей с официального сайта SAPatcher'
+                });
+              } catch (createErr) {}
+            }
+
+            // 2. Add label "отзыв" to issue
+            try {
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number,
+                labels: ['отзыв']
+              });
+            } catch (err) {}
+
+            // 3. Post a thank-you response
+            try {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body: '🎉 **Спасибо за ваш отзыв!**\n\nВаш отзыв успешно зарегистрирован и теперь отображается на официальном сайте [passatb5by.github.io/SAPatch](https://passatb5by.github.io/SAPatch/).\n\nДанный тикет автоматически закрыт для поддержания порядка в репозитории.'
+              });
+            } catch (err) {}
+
+            // 4. Automatically close the issue
+            try {
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number,
+                state: 'closed'
+              });
+            } catch (err) {}
