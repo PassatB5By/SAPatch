@@ -27,7 +27,7 @@ export default {
 
     try {
       const data = await request.json();
-      const author = (data.author || 'Гость').trim();
+      const author = 'Anonymous';
       const contactType = (data.contactType || 'Email').trim();
       const contactValue = (data.contactValue || '').trim();
       const rating = Math.min(5, Math.max(1, parseInt(data.rating, 10) || 5));
@@ -47,7 +47,7 @@ export default {
       const issueBody = [
         `### Rating: ${starString} (${rating}/5)`,
         `**Category:** ${category}`,
-        `**Author:** ${author} (Гость)`,
+        `**Author:** Anonymous`,
         `**Contact (${contactType}):** \`${contactValue}\``,
         '',
         pros ? `**Pros:**\n${pros}\n` : '',

@@ -39,7 +39,7 @@ if (!$data) {
     exit;
 }
 
-$author = trim($data['author'] ?? 'Гость');
+$author = 'Anonymous';
 $contactType = trim($data['contactType'] ?? 'Email');
 $contactValue = trim($data['contactValue'] ?? '');
 $rating = intval($data['rating'] ?? 5);
@@ -67,7 +67,7 @@ $starString = str_repeat('★', $rating) . str_repeat('☆', 5 - $rating);
 
 $issueBody = "### Rating: {$starString} ({$rating}/5)\n"
     . "**Category:** {$category}\n"
-    . "**Author:** {$author} (Гость)\n"
+    . "**Author:** Anonymous\n"
     . "**Contact ({$contactType}):** `{$contactValue}`\n\n";
 
 if (!empty($pros)) {

@@ -275,13 +275,27 @@ async function fetchReviews() {
       let title = (iss.title || '').replace(/^\[REVIEW\]\s*/i, '').trim();
       if (!title) title = isRu ? 'Отзыв о SAPatcher' : 'Community Review';
 
+      let isAnonymous = false;
       let contact = '';
       const contactMatch = body.match(/\*\*Contact(?:\s*\([^)]+\))?:\*\*\s*(.+)/i);
-      if (contactMatch && contactMatch[1].trim()) contact = contactMatch[1].trim().replace(/`/g, '');
+      if (contactMatch && contactMatch[1].trim()) {
+        contact = contactMatch[1].trim().replace(/`/g, '');
+        isAnonymous = true;
+      }
+      if (body.includes('Guest Form') || author.toLowerCase().includes('гость') || author.toLowerCase() === 'anonymous' || author.toLowerCase().includes('аноним')) {
+        isAnonymous = true;
+      }
+
+      if (isAnonymous) {
+        author = 'Anonymous';
+      }
 
       return {
         author,
-        avatar: iss.user ? iss.user.avatar_url : 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png',
+        isAnonymous,
+        avatar: isAnonymous
+          ? 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'
+          : (iss.user ? iss.user.avatar_url : 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'),
         date: new Date(iss.created_at).toLocaleDateString(),
         rating,
         category,
@@ -318,12 +332,17 @@ function renderReviews(list) {
     const starsHtml = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
     const card = document.createElement('div');
     card.className = 'review-card';
+
+    const authorHtml = r.isAnonymous
+      ? `<span class="anonymous-pill"><svg class="anonymous-gh-icon" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg> Anonymous</span>`
+      : `<span class="reviewer-name-text">${r.author}</span>`;
+
     card.innerHTML = `
       <div class="review-top">
         <div class="reviewer-info">
           <img src="${r.avatar}" alt="${r.author}" class="reviewer-avatar">
           <div class="reviewer-meta">
-            <span class="reviewer-name">${r.author}</span>
+            <div class="reviewer-name">${authorHtml}</div>
             ${r.contact ? `<span class="review-contact-badge" title="${r.contact}">✓ ${r.contact}</span>` : ''}
             <span class="review-date">${r.date}</span>
           </div>
@@ -353,6 +372,8 @@ function setupReviewModal() {
   const tabGuest = document.getElementById('tabModeGuest');
   const guestRow = document.getElementById('guestContactRow');
   const guestNotice = document.getElementById('guestNoticeBox');
+  const authorGroup = document.getElementById('authorGroup');
+  const authorInput = document.getElementById('reviewAuthor');
   const authNoticeText = document.getElementById('authNoticeText');
   const btnSubmitText = document.getElementById('btnSubmitReviewText');
   const submitBtn = document.getElementById('btnSubmitReview');
@@ -390,6 +411,11 @@ function setupReviewModal() {
     if (mode === 'github') {
       tabGithub.classList.add('active');
       tabGuest.classList.remove('active');
+      if (authorGroup) authorGroup.style.display = 'block';
+      if (authorInput) {
+        if (authorInput.value === 'Anonymous') authorInput.value = '';
+        authorInput.required = true;
+      }
       if (guestRow) guestRow.style.display = 'none';
       if (guestNotice) guestNotice.style.display = 'none';
       if (authNoticeText) authNoticeText.textContent = dict['modal.authNotice'];
@@ -397,6 +423,11 @@ function setupReviewModal() {
     } else {
       tabGuest.classList.add('active');
       tabGithub.classList.remove('active');
+      if (authorGroup) authorGroup.style.display = 'none';
+      if (authorInput) {
+        authorInput.value = 'Anonymous';
+        authorInput.required = false;
+      }
       if (guestRow) guestRow.style.display = 'flex';
       if (guestNotice) guestNotice.style.display = 'block';
       if (authNoticeText) authNoticeText.textContent = dict['modal.authNoticeGuest'];
@@ -471,7 +502,7 @@ function setupReviewModal() {
     const guestIssueBody = [
       `### Rating: ${starString} (${rating}/5)`,
       `**Category:** ${category}`,
-      `**Author:** ${author} (Гость)`,
+      `**Author:** Anonymous`,
       `**Contact (${contactType}):** \`${contactValue}\``,
       '',
       pros ? `**Pros:**\n${pros}\n` : '',
