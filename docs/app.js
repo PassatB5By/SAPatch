@@ -3,7 +3,7 @@
 // ============================================================
 
 const GITHUB_REPO = 'PassatB5By/SAPatch';
-const FEEDBACK_LABEL = 'отзыв';
+const FEEDBACK_LABEL = 'review';
 
 // --- Bilingual Dictionary ---
 const translations = {
@@ -38,13 +38,13 @@ const translations = {
     'specs.recBalanced': 'Идеальный баланс совместимости и стабильности. Подходит для NVIDIA GTX 9xx/7xx и AMD RX 4xx/5xx.',
     'specs.recLegacy': 'Для старых видеокарт и встроенной графики (Vulkan 1.1). Минимальные системные требования.',
     'reviews.title': 'Реальные отзывы игроков',
-    'reviews.subtitle': 'Публикуются напрямую в GitHub Issues с меткой «отзыв»',
+    'reviews.subtitle': 'Публикуются напрямую в GitHub Issues с меткой «review»',
     'reviews.btnWrite': 'Написать отзыв',
     'reviews.loading': 'Загрузка отзывов из GitHub Issues...',
     'reviews.emptyTitle': 'Пока нет отзывов',
     'reviews.emptyText': 'Будьте первым, кто оставит свой отзыв о SAPatcher!',
     'reviews.ctaTitle': 'Играете с SAPatcher? Поделитесь впечатлениями!',
-    'reviews.ctaSubtitle': 'Ваш отзыв публикуется в официальном репозитории с меткой отзыв и помогает развивать проект.',
+    'reviews.ctaSubtitle': 'Ваш отзыв публикуется в официальном репозитории с меткой review и помогает развивать проект.',
     'reviews.ctaBtn': 'Оставить отзыв',
     'faq.title': 'Часто задаваемые вопросы',
     'faq.q1': 'Работает ли SAPatcher с обычной GTA SA, SA-MP и CRMP?',
@@ -56,7 +56,7 @@ const translations = {
     'faq.q4': 'Как вернуть оригинальный лаунчер без изменений?',
     'faq.a4': 'В интерфейсе SAPatcher нажмите кнопку «Откатить лаунчер». Программа восстановит оригинальный немодифицированный app.asar из резервной копии.',
     'modal.title': 'Написать отзыв о SAPatcher',
-    'modal.desc': 'Отзыв публикуется напрямую в GitHub Issues с меткой «отзыв»',
+    'modal.desc': 'Отзыв публикуется напрямую в GitHub Issues с меткой «review»',
     'modal.ratingLabel': 'Оценка:',
     'modal.authorLabel': 'Ваше имя или ник:',
     'modal.categoryLabel': 'Любимая функция / Клиент:',
@@ -97,13 +97,13 @@ const translations = {
     'specs.recBalanced': 'Ideal balance of compatibility and performance. Perfect for NVIDIA GTX 9xx/7xx and AMD RX 4xx/5xx.',
     'specs.recLegacy': 'For older GPUs and integrated graphics (Vulkan 1.1). Minimal hardware requirements.',
     'reviews.title': 'Real Player Reviews',
-    'reviews.subtitle': 'Loaded live from official GitHub Issues tagged with "отзыв"',
+    'reviews.subtitle': 'Loaded live from official GitHub Issues tagged with "review"',
     'reviews.btnWrite': 'Write a Review',
     'reviews.loading': 'Fetching reviews from GitHub Issues...',
     'reviews.emptyTitle': 'No reviews yet',
     'reviews.emptyText': 'Be the first to share your experience with SAPatcher!',
     'reviews.ctaTitle': 'Playing with SAPatcher? Share your experience!',
-    'reviews.ctaSubtitle': 'Your review is posted directly to our GitHub repository under the отзыв label.',
+    'reviews.ctaSubtitle': 'Your review is posted directly to our GitHub repository under the "review" label.',
     'reviews.ctaBtn': 'Leave Review',
     'faq.title': 'Frequently Asked Questions',
     'faq.q1': 'Does SAPatcher work with standard GTA SA, SA-MP, and CRMP?',
@@ -115,7 +115,7 @@ const translations = {
     'faq.q4': 'How do I revert to the original unmodified launcher?',
     'faq.a4': 'Inside SAPatcher, simply click "Restore Launcher". The program instantly restores the original unmodified app.asar from backup.',
     'modal.title': 'Write a Review for SAPatcher',
-    'modal.desc': 'Your review will be submitted directly to GitHub Issues labeled as "отзыв"',
+    'modal.desc': 'Your review will be submitted directly to GitHub Issues labeled as "review"',
     'modal.ratingLabel': 'Rating:',
     'modal.authorLabel': 'Your Name or Handle:',
     'modal.categoryLabel': 'Favorite Feature / Client:',
@@ -252,7 +252,7 @@ async function fetchReviews() {
       }
 
       let title = (iss.title || '').replace(/^\[REVIEW\]\s*/i, '').trim();
-      if (!title) title = 'Отзыв о SAPatcher';
+      if (!title) title = isRu ? 'Отзыв о SAPatcher' : 'Community Review';
 
       return {
         author,
@@ -279,7 +279,7 @@ function renderEmptyState() {
     <div class="empty-reviews-card">
       <div class="empty-icon">💬</div>
       <h4 class="empty-title">${isRu ? 'Пока нет отзывов' : 'No reviews yet'}</h4>
-      <p class="empty-desc">${isRu ? 'Опубликованные через форму отзывы появятся здесь автоматически после создания в GitHub Issues с меткой «отзыв».' : 'Reviews submitted through the form will appear here automatically once created in GitHub Issues with the "отзыв" label.'}</p>
+      <p class="empty-desc">${isRu ? 'Опубликованные через форму отзывы появятся здесь автоматически после создания в GitHub Issues с меткой «review».' : 'Reviews submitted through the form will appear here automatically once created in GitHub Issues with the "review" label.'}</p>
     </div>
   `;
 }
