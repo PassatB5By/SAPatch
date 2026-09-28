@@ -32,3 +32,4 @@ motion/
 dxvk-*/
 *.tar.gz
 scratch/
+publish/
