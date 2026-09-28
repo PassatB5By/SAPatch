@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationTitle>SAPatcher</ApplicationTitle>
+    <AssemblyName>SAPatcher</AssemblyName>
+    <RootNamespace>SAPatcher</RootNamespace>
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Photino.NET" Version="4.0.16" />
+    <PackageReference Include="System.Management" Version="9.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="SecuritySource\**" />
+    <EmbeddedResource Remove="SecuritySource\**" />
+    <None Remove="SecuritySource\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="wwwroot\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <None Include="*.tar.gz" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="4gb_patch.exe" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

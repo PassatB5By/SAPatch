@@ -1,0 +1,34 @@
+# .NET and Visual Studio build outputs
+bin/
+obj/
+[Bb]in/
+[Oo]bj/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+*.pidb
+*.booproj
+*.sln.docstates
+
+# IDE and Editor configurations
+.vs/
+.vscode/
+.idea/
+.gemini/
+
+# Closed-source proprietary security module (Do NOT commit to GitHub)
+SecuritySource/
+*.Security.dll
+*.Security.pdb
+
+# Local settings and user data
+settings.json
+*.log
+SAPatcher_Diagnostics_Report.html
+
+# Local heavy test / unpack assets
+motion/
+dxvk-*/
+*.tar.gz
+scratch/

@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAPatcher</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="bg-layer">
+    <canvas id="bgCanvas"></canvas>
+    <div class="bg-glow bg-glow--1"></div>
+    <div class="bg-glow bg-glow--2"></div>
+    <div class="bg-grid-overlay"></div>
+  </div>
+
+  <div class="app-shell settings-shell">
+    <aside class="settings-nav">
+      <div class="brand-block">
+        <div class="brand-logo-wrap">
+          <svg class="brand-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="18" cy="18" r="15" stroke="currentColor" stroke-width="2" stroke-dasharray="3 3" opacity="0.4"/>
+            <path d="M7 23C7 16.9249 11.9249 12 18 12C24.0751 12 29 16.9249 29 23" stroke="url(#logoGrad)" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="18" cy="22" r="3" fill="#38bdf8"/>
+            <line x1="18" y1="22" x2="25" y2="15" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round"/>
+            <defs>
+              <linearGradient id="logoGrad" x1="7" y1="12" x2="29" y2="23" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#38bdf8"/>
+                <stop offset="1" stop-color="#6366f1"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="brand-meta">
+            <span class="brand-name">SAPatcher</span>
+            <span class="brand-badge font-mono">v1.0.0</span>
+          </div>
+        </div>
+        <p class="brand-desc" data-i18n="app.slogan">A utility that changes the course of the game on modern PCs in the old GTA SA</p>
+      </div>
+
+      <nav class="nav-list" id="mainNav">
+        <button type="button" class="nav-item active" data-tab="tab-compatibility" id="navCompatibility">
+          <div class="nav-item-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="4" y="4" width="16" height="16" rx="2"/>
+              <rect x="9" y="9" width="6" height="6"/>
+              <path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/>
+            </svg>
+          </div>
+          <span class="nav-label" data-i18n="nav.compatibility">Проверка совместимости</span>
+        </button>
+
+        <button type="button" class="nav-item" data-tab="tab-crmp" id="navCrmp">
+          <div class="nav-item-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3"/>
+            </svg>
+          </div>
+          <span class="nav-label" data-i18n="nav.crmp">Патчинг CRMP</span>
+          <span class="badge badge-wip font-mono" data-i18n="nav.wip_badge">WIP</span>
+        </button>
+
+        <button type="button" class="nav-item" data-tab="tab-samp" id="navSamp">
+          <div class="nav-item-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </div>
+          <span class="nav-label" data-i18n="nav.samp">Патчинг SAMP</span>
+          <span class="badge badge-wip font-mono" data-i18n="nav.wip_badge">WIP</span>
+        </button>
+
+        <button type="button" class="nav-item" data-tab="tab-projects" id="navProjects">
+          <div class="nav-item-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+              <polyline points="2 17 12 22 22 17"/>
+              <polyline points="2 12 12 17 22 12"/>
+            </svg>
+          </div>
+          <span class="nav-label" data-i18n="nav.projects">Патчинг проектов</span>
+          <span class="badge badge-active font-mono" id="navProjectsBadge" data-i18n="nav.projects_badge">LIVE</span>
+        </button>
+      </nav>
+
+      <div class="settings-nav-footer">
+        <div class="footer-control-row">
+          <button type="button" class="lang-toggle-pill" id="langToggleBtn" title="Переключить язык">
+            <span class="lang-indicator" id="langCurrent">RU</span>
+            <span class="lang-arrow">⇄</span>
+            <span class="lang-alt" id="langAlt">EN</span>
+          </button>
+          <button type="button" class="theme-toggle-btn" id="themeToggleBtn" aria-label="Сменить тему">
+            <svg class="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="5"/>
+              <line x1="12" y1="1" x2="12" y2="3"/>
+              <line x1="12" y1="21" x2="12" y2="23"/>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+              <line x1="1" y1="12" x2="3" y2="12"/>
+              <line x1="21" y1="12" x2="23" y2="12"/>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+            <svg class="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="settings-main">
+      <section class="settings-panel active animate-enter" id="tab-compatibility">
+        <div class="panel-header">
+          <div class="panel-header-info">
+            <h1 class="panel-title" data-i18n="diagnostics.title">Аппаратная диагностика системы</h1>
+            <p class="panel-subtitle" data-i18n="diagnostics.subtitle">Оценка готовности аппаратных и программных компонентов ПК к трансляции DirectX 9 в Vulkan</p>
+          </div>
+          <div class="panel-header-actions">
+            <div class="status-indicator">
+              <span class="status-dot-inline status-dot--ready" id="systemStatusDot"></span>
+              <span class="status-text font-mono" id="systemStatusText" data-i18n="diagnostics.ready_status">Система готова к диагностике</span>
+            </div>
+            <button type="button" class="btn btn-primary" id="runDiagnosticsBtn">
+              <span class="btn-loader"></span>
+              <span class="btn-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+              </span>
+              <span class="btn-text" data-i18n="diagnostics.run_btn">Запустить диагностику</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="diagnostics-grid">
+          <div class="glass-card os-card">
+            <div class="card-header">
+              <div class="card-header-title-wrap">
+                <div class="card-icon card-icon--os">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                    <line x1="8" y1="21" x2="16" y2="21"/>
+                    <line x1="12" y1="17" x2="12" y2="21"/>
+                  </svg>
+                </div>
+                <div>
+                  <h2 class="card-title" data-i18n="os.card_title">Операционная система</h2>
+                  <p class="card-subtitle" data-i18n="os.card_subtitle">Конфигурация ядра Windows и графической подсистемы</p>
+                </div>
+              </div>
+              <span class="badge badge-success font-mono" id="osBadge" data-i18n="os.badge_ready">WDDM 3.x Готов</span>
+            </div>
+
+            <div class="specs-list">
+              <div class="spec-row">
+                <span class="spec-label" data-i18n="os.param_name">Версия ОС</span>
+                <span class="spec-val font-mono" id="osNameVal">Windows 11 Pro 64-bit</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-label" data-i18n="os.param_build">Номер сборки</span>
+                <span class="spec-val font-mono" id="osBuildVal">25H2 (Build 26200.1742)</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-label" data-i18n="os.param_runtime">DirectX Runtime</span>
+                <span class="spec-val font-mono" id="osRuntimeVal">DirectX 12 (DirectX Agility SDK)</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-label" data-i18n="os.param_wddm">Драйвер WDDM</span>
+                <span class="spec-val font-mono" id="osWddmVal">WDDM 3.2 (Vulkan WSI совместим)</span>
+              </div>
+            </div>
+
+            <div class="card-footer-note">
+              <div class="note-dot"></div>
+              <p class="note-text" data-i18n="os.note">Подсистема Windows оптимизирована для аппаратных дескрипторов Vulkan и низких задержек кадра.</p>
+            </div>
+          </div>
+
+          <div class="glass-card gpu-card">
+            <div class="card-header">
+              <div class="card-header-title-wrap">
+                <div class="card-icon card-icon--gpu">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+                    <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+                    <line x1="6" y1="6" x2="6.01" y2="6"/>
+                    <line x1="6" y1="18" x2="6.01" y2="18"/>
+                  </svg>
+                </div>
+                <div>
+                  <h2 class="card-title" data-i18n="gpu.card_title">Видеокарта и совместимость с DXVK</h2>
+                  <p class="card-subtitle" data-i18n="gpu.card_subtitle">Аппаратное ускорение и поддержка расширений Vulkan API</p>
+                </div>
+              </div>
+              <span class="badge badge-accent font-mono" id="gpuBadge" data-i18n="gpu.badge_ready">Vulkan 1.3/1.4 Ready</span>
+            </div>
+
+            <div class="specs-list specs-list--2cols">
+              <div class="spec-row">
+                <span class="spec-label" data-i18n="gpu.param_model">Графический чип (GPU)</span>
+                <span class="spec-val font-mono" id="gpuModelVal">NVIDIA GeForce RTX 3060 Ti</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-label" data-i18n="gpu.param_vram">Объем видеопамяти (VRAM)</span>
+                <span class="spec-val font-mono" id="gpuVramVal">8192 MB (8 GB GDDR6)</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-label" data-i18n="gpu.param_driver">Версия видеодрайвера</span>
+                <span class="spec-val font-mono" id="gpuDriverVal">591.86 (DirectX / Vulkan)</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-label" data-i18n="gpu.param_directx">Поддержка DirectX</span>
+                <span class="spec-val font-mono" id="gpuDirectxVal">DirectX 12 (FL 12_2 Ultimate)</span>
+              </div>
+              <div class="spec-row spec-row--span2">
+                <span class="spec-label" data-i18n="gpu.param_vulkan">Vulkan API Loader</span>
+                <span class="spec-val font-mono" id="gpuVulkanVal">Vulkan Loader 1.4.321.0 (vulkan-1.dll)</span>
+              </div>
+            </div>
+
+            <div class="dxvk-matrix-section">
+              <span class="matrix-section-title font-mono" data-i18n="gpu.grid_title">Матрица совместимости версий DXVK</span>
+              <div class="dxvk-tiers-grid">
+                <div class="dxvk-tier-card" id="tierDxvk1103">
+                  <div class="tier-top">
+                    <span class="tier-version font-mono" data-i18n="gpu.dxvk1103_title">DXVK 1.10.3</span>
+                    <span class="badge badge-success font-mono" data-i18n="gpu.dxvk1103_badge">Полная совместимость</span>
+                  </div>
+                  <span class="tier-spec font-mono" data-i18n="gpu.dxvk1103_spec">Vulkan 1.1 (Legacy D3D9)</span>
+                </div>
+
+                <div class="dxvk-tier-card" id="tierDxvk23">
+                  <div class="tier-top">
+                    <span class="tier-version font-mono" data-i18n="gpu.dxvk23_title">DXVK 2.3</span>
+                    <span class="badge badge-success font-mono" data-i18n="gpu.dxvk23_badge">Полная совместимость</span>
+                  </div>
+                  <span class="tier-spec font-mono" data-i18n="gpu.dxvk23_spec">Vulkan 1.3 Baseline</span>
+                </div>
+
+                <div class="dxvk-tier-card" id="tierDxvk30">
+                  <div class="tier-top">
+                    <span class="tier-version font-mono" data-i18n="gpu.dxvk30_title">DXVK 3.0</span>
+                    <span class="badge badge-info font-mono" data-i18n="gpu.dxvk30_badge">Поддерживается</span>
+                  </div>
+                  <span class="tier-spec font-mono" data-i18n="gpu.dxvk30_spec">Vulkan Extended Dynamic State</span>
+                </div>
+
+                <div class="dxvk-tier-card tier-card--highlight" id="tierDxvk311">
+                  <div class="tier-top">
+                    <span class="tier-version font-mono" data-i18n="gpu.dxvk311_title">DXVK 3.1.1</span>
+                    <span class="badge badge-highlight font-mono" data-i18n="gpu.dxvk311_badge">Рекомендуется</span>
+                  </div>
+                  <span class="tier-spec font-mono" data-i18n="gpu.dxvk311_spec">Актуальная: расширенные пайплайны</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="gpu-verdict-box" id="gpuVerdictBox">
+              <div class="verdict-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </div>
+              <div class="verdict-content">
+                <p class="verdict-title font-heading" id="gpuVerdictTitle" data-i18n="gpu.verdict_text">Ваша видеокарта полностью поддерживает DXVK 3.1.1 для трансляции GTA SA.</p>
+                <p class="verdict-desc" id="gpuVerdictDesc" data-i18n="gpu.verdict_desc">Доступна полная аппаратная компиляция шейдеров в память GPU без фризов при первом запуске.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass-card cpu-card">
+            <div class="card-header">
+              <div class="card-header-title-wrap">
+                <div class="card-icon card-icon--cpu">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="4" y="4" width="16" height="16" rx="2"/>
+                    <rect x="9" y="9" width="6" height="6"/>
+                    <line x1="9" y1="1" x2="9" y2="4"/>
+                    <line x1="15" y1="1" x2="15" y2="4"/>
+                    <line x1="9" y1="20" x2="9" y2="23"/>
+                    <line x1="15" y1="20" x2="15" y2="23"/>
+                    <line x1="20" y1="9" x2="23" y2="9"/>
+                    <line x1="20" y1="14" x2="23" y2="14"/>
+                    <line x1="1" y1="9" x2="4" y2="9"/>
+                    <line x1="1" y1="14" x2="4" y2="14"/>
+                  </svg>
+                </div>
+                <div>
+                  <h2 class="card-title" data-i18n="cpu.card_title">Процессор и готовность к Vulkan</h2>
+                  <p class="card-subtitle" data-i18n="cpu.card_subtitle">Многопоточный оверхед и поддержка векторных инструкций</p>
+                </div>
+              </div>
+              <span class="badge badge-success font-mono" id="cpuBadge" data-i18n="cpu.badge_ready">Многопоточность активна</span>
+            </div>
+
+            <div class="specs-list specs-list--2cols">
+              <div class="spec-row">
+                <span class="spec-label" data-i18n="cpu.param_model">Модель процессора</span>
+                <span class="spec-val font-mono" id="cpuModelVal">AMD Ryzen 5 2600 Six-Core</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-label" data-i18n="cpu.param_topology">Ядра и потоки</span>
+                <span class="spec-val font-mono" id="cpuTopologyVal">6 ядер / 12 потоков</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-label" data-i18n="cpu.param_clock">Тактовая частота</span>
+                <span class="spec-val font-mono" id="cpuClockVal">3.40 GHz (3400 MHz)</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-label" data-i18n="cpu.param_instructions">Инструкции</span>
+                <div class="instruction-tags">
+                  <span class="instruction-badge font-mono active" id="sse42Badge">SSE4.2</span>
+                  <span class="instruction-badge font-mono active" id="avx2Badge">AVX2</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="cpu-overhead-box">
+              <div class="overhead-top-row">
+                <span class="overhead-title font-mono" data-i18n="cpu.overhead_title">Запас мощности CPU для рендеринга Vulkan</span>
+                <span class="overhead-score font-mono" id="cpuOverheadScore">92%</span>
+              </div>
+              <div class="overhead-progress-track">
+                <div class="overhead-progress-fill" id="cpuOverheadBar" style="width: 92%"></div>
+              </div>
+              <div class="overhead-bottom-row">
+                <div class="overhead-status-tag">
+                  <span class="status-dot-inline status-dot--ready"></span>
+                  <span class="overhead-status-label font-mono" id="cpuOverheadStatus" data-i18n="cpu.overhead_status">Готов к низкоуровневой обработке Vulkan</span>
+                </div>
+                <p class="overhead-desc" data-i18n="cpu.overhead_desc">Трансляция DXVK разгружает однопоточный драйвер D3D9 и распределяет вызовы отрисовки по всем логическим ядрам процессора.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass-card display-card">
+            <div class="card-header">
+              <div class="card-header-title-wrap">
+                <div class="card-icon card-icon--display">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="3" width="20" height="14" rx="2"/>
+                    <line x1="8" y1="21" x2="16" y2="21"/>
+                    <line x1="12" y1="17" x2="12" y2="21"/>
+                  </svg>
+                </div>
+                <div>
+                  <h2 class="card-title" data-i18n="display.card_title">Дисплей и видеорежимы</h2>
+                  <p class="card-subtitle" data-i18n="display.card_subtitle">Параметры экрана, частота обновления и поддержка HDR</p>
+                </div>
+              </div>
+              <span class="badge badge-accent font-mono" id="displayBadge" data-i18n="display.badge_ready">200 Hz High-FPS Ready</span>
+            </div>
+
+            <div class="specs-list specs-list--2cols">
+              <div class="spec-row">
+                <span class="spec-label" data-i18n="display.param_model">Модель монитора</span>
+                <span class="spec-val font-mono" id="displayModelVal">Acer KG271U X1 (27" QHD)</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-label" data-i18n="display.param_resolution">Текущее разрешение</span>
+                <span class="spec-val font-mono" id="displayResVal">2560 × 1440 (2K QHD)</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-label" data-i18n="display.param_current_hz">Установленная герцовка</span>
+                <span class="spec-val font-mono" id="displayCurrentHzVal">200 Hz</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-label" data-i18n="display.param_max_hz">Максимальная герцовка</span>
+                <span class="spec-val font-mono" id="displayMaxHzVal">200 Hz</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-label" data-i18n="display.param_hdr">Поддержка HDR</span>
+                <span class="spec-val font-mono" id="displayHdrVal">HDR10 (High Dynamic Range) Supported</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-label" data-i18n="display.param_colors">Глубина цвета</span>
+                <span class="spec-val font-mono" id="displayColorVal">10-bit HDR / 8-bit + FRC (1.07 Billion Colors)</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-label" data-i18n="display.param_vrr">Переменная частота (VRR)</span>
+                <span class="spec-val font-mono" id="displayVrrVal">AMD FreeSync Premium / G-Sync Compatible (Active)</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-label" data-i18n="display.param_vulkan_wsi">Vulkan Present Mode</span>
+                <span class="spec-val font-mono" id="displayVulkanWsiVal">VK_PRESENT_MODE_MAILBOX_KHR (Fast-Sync)</span>
+              </div>
+            </div>
+
+            <div class="card-footer-note">
+              <div class="note-dot"></div>
+              <p class="note-text" data-i18n="display.note">Трансляция DXVK в Vulkan позволяет GTA SA стабильно работать на высокой частоте 144–200 Гц с разблокированным физическим движком.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-panel" id="tab-crmp">
+        <div class="panel-header">
+          <div class="panel-header-info">
+            <h1 class="panel-title" data-i18n="patching.crmp_title">Патчинг CRMP (GTA Criminal Russia)</h1>
+            <p class="panel-subtitle" data-i18n="patching.crmp_desc">Интеграция DXVK трансляции для клиента CRMP. Включает адаптацию под кастомные интерфейсы, фикс крашей шрифтов и синхронизацию кадровой частоты.</p>
+          </div>
+          <span class="badge badge-wip font-mono" data-i18n="patching.wip_badge">Разработка</span>
+        </div>
+
+        <div class="wip-container glass-card">
+          <div class="wip-icon-halo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="5 3 19 12 5 21 5 3"/>
+            </svg>
+          </div>
+          <h2 class="wip-title font-heading" data-i18n="patching.status_in_dev">Модуль находится в активной разработке</h2>
+          <p class="wip-desc" data-i18n="patching.crmp_desc">Интеграция DXVK трансляции для клиента CRMP. Включает адаптацию под кастомные интерфейсы, фикс крашей шрифтов и синхронизацию кадровой частоты.</p>
+          <div class="wip-actions">
+            <button type="button" class="btn btn-secondary trigger-wip-dialog" data-feature="CRMP">
+              <span class="btn-text" data-i18n="patching.btn_apply">Применить оптимизацию Vulkan</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-panel" id="tab-samp">
+        <div class="panel-header">
+          <div class="panel-header-info">
+            <h1 class="panel-title" data-i18n="patching.samp_title">Патчинг SAMP (San Andreas Multiplayer)</h1>
+            <p class="panel-subtitle" data-i18n="patching.samp_desc">Инъекция оптимизированных библиотек d3d9.dll и dxvk.conf в директорию клиента SA-MP с поддержкой 2K/4K разрешений и стабильным лимитом 60-144 FPS.</p>
+          </div>
+          <span class="badge badge-wip font-mono" data-i18n="patching.wip_badge">Разработка</span>
+        </div>
+
+        <div class="wip-container glass-card">
+          <div class="wip-icon-halo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </div>
+          <h2 class="wip-title font-heading" data-i18n="patching.status_in_dev">Модуль находится в активной разработке</h2>
+          <p class="wip-desc" data-i18n="patching.samp_desc">Инъекция оптимизированных библиотек d3d9.dll и dxvk.conf в директорию клиента SA-MP с поддержкой 2K/4K разрешений и стабильным лимитом 60-144 FPS.</p>
+          <div class="wip-actions">
+            <button type="button" class="btn btn-secondary trigger-wip-dialog" data-feature="SAMP">
+              <span class="btn-text" data-i18n="patching.btn_apply">Применить оптимизацию Vulkan</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-panel" id="tab-projects">
+        <div class="panel-header">
+          <div class="panel-header-info">
+            <h1 class="panel-title" data-i18n="projects.panel_title">Патчинг проектов и лаунчеров</h1>
+            <p class="panel-subtitle" data-i18n="projects.panel_subtitle">Универсальный профилировщик и инжектор DXVK / 4GB RAM Patch для кастомных лаунчеров CRMP и SAMP</p>
+          </div>
+          <div class="panel-header-actions">
+            <button type="button" class="btn btn-secondary" id="projectsRescanAllBtn">
+              <span class="btn-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                </svg>
+              </span>
+              <span class="btn-text" data-i18n="projects.btn_rescan_all">Поиск лаунчеров</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Motion Project Featured Hero Tile (Xbox One Style) -->
+        <div class="motion-featured-tile glass-card" id="tileMotionProject">
+          <div class="xbox-tile-glow"></div>
+          <div class="motion-tile-content">
+            <div class="motion-tile-main">
+              <div class="xbox-tile-icon-box xbox-tile-icon--motion">
+                <span class="motion-icon-glyph font-heading">M</span>
+              </div>
+              <div class="motion-tile-info">
+                <div class="motion-tile-tags">
+                  <span class="xbox-tile-kicker font-mono" data-i18n="projects.motion_kicker">CRMP NEXT-GEN ROLEPLAY</span>
+                  <div class="xbox-tile-status-tag font-mono" id="tileMotionStatusBadge">
+                    <span class="status-dot-inline status-dot--ready"></span>
+                    <span data-i18n="projects.motion_status_detected">Лаунчер обнаружен</span>
+                  </div>
+                </div>
+                <h2 class="xbox-tile-title font-heading">MOTION PROJECT</h2>
+                <p class="xbox-tile-subtitle" data-i18n="projects.motion_tile_desc">Кастомный игровой движок на базе GTA SA с HD-моделями, текстурами высокого разрешения и физикой.</p>
+              </div>
+            </div>
+            <div class="motion-tile-side">
+              <div class="motion-tile-meta font-mono">
+                <span class="meta-item" id="tileMotionVersion">v1.2.46 (Squirrel Client)</span>
+                <span class="meta-dot">•</span>
+                <span class="meta-item">DXVK 1.10.3 / 2.3+ Ready</span>
+                <span class="meta-dot">•</span>
+                <span class="meta-item">4GB LAA</span>
+              </div>
+              <div class="motion-tile-tech-chips font-mono">
+                <span class="badge badge-cyan">d3d9.seamless = True</span>
+                <span class="badge badge-success">dxvk.hud (200 FPS)</span>
+                <span class="badge badge-highlight">dxvk.tearFree = True</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Motion Project Studio Window (Dedicated Inner Configuration Tab) -->
+        <div class="motion-studio-window glass-card" id="motionStudioWindow">
+          <div class="studio-header">
+            <div class="studio-header-title-wrap">
+              <div class="studio-logo-badge font-heading">MP</div>
+              <div>
+                <div class="studio-title-row">
+                  <h2 class="studio-title font-heading" data-i18n="motion.title">Motion Project — Конфигуратор Vulkan и 4GB LAA</h2>
+                  <span class="badge badge-accent font-mono" id="motionVersionBadge">v1.2.46 (Electron amd64)</span>
+                </div>
+                <p class="studio-subtitle" data-i18n="motion.subtitle">Автоматическое определение пути Motion Launcher, инъекция транслятора DXVK и расширение доступной ОЗУ до 4 ГБ</p>
+              </div>
+            </div>
+            <div class="studio-status-indicator">
+              <span class="status-dot-inline status-dot--ready" id="motionStatusDot"></span>
+              <span class="status-text font-mono" id="motionStatusText" data-i18n="motion.status_ready">Лаунчер готов к оптимизации</span>
+            </div>
+          </div>
+
+          <!-- Section 1: Launcher Detection & Path -->
+          <div class="studio-section">
+            <div class="studio-section-header">
+              <div class="section-title-wrap">
+                <span class="section-num font-mono">01</span>
+                <span class="section-title font-heading" data-i18n="motion.section1_title">Исполняемый файл и каталог Motion Launcher</span>
+              </div>
+              <span class="badge badge-success font-mono" id="motionSourceBadge" data-i18n="motion.source_badge">AppData\Local (Обнаружен)</span>
+            </div>
+
+            <div class="path-detection-box">
+              <div class="path-input-group">
+                <div class="path-input-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                  </svg>
+                </div>
+                <input type="text" class="path-input font-mono" id="motionLauncherPathInput" value="C:\Users\Gigabyte A320M-H\AppData\Local\motion-launcher\Motion Launcher.exe" spellcheck="false">
+                <button type="button" class="btn btn-secondary path-btn" id="motionRescanBtn" title="Обнаружить лаунчер заново">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="23 4 23 10 17 10"/>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                  </svg>
+                  <span class="btn-text" data-i18n="motion.btn_rescan">Поиск</span>
+                </button>
+                <button type="button" class="btn btn-secondary path-btn" id="motionBrowseBtn" title="Выбрать файл вручную">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                  </svg>
+                  <span class="btn-text" data-i18n="motion.btn_browse">Обзор...</span>
+                </button>
+                <button type="button" class="btn btn-ghost path-btn" id="motionOpenFolderBtn" title="Открыть директорию лаунчера в Проводнике">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                    <polyline points="15 3 21 3 21 9"/>
+                    <line x1="10" y1="14" x2="21" y2="3"/>
+                  </svg>
+                  <span class="btn-text" data-i18n="motion.btn_open_folder">Папка</span>
+                </button>
+              </div>
+
+              <div class="path-details-grid">
+                <div class="path-detail-item">
+                  <span class="detail-label" data-i18n="motion.detail_location">Расположение</span>
+                  <span class="detail-val font-mono" id="motionDetailDir">%LOCALAPPDATA%\motion-launcher</span>
+                </div>
+                <div class="path-detail-item">
+                  <span class="detail-label" data-i18n="motion.detail_version">Версия Squirrel</span>
+                  <span class="detail-val font-mono" id="motionDetailVersion">1.2.46 (app-1.2.46)</span>
+                </div>
+                <div class="path-detail-item">
+                  <span class="detail-label" data-i18n="motion.detail_size">Размер файла</span>
+                  <span class="detail-val font-mono" id="motionDetailSize">381.5 КБ (Squirrel Launcher)</span>
+                </div>
+                <div class="path-detail-item">
+                  <span class="detail-label" data-i18n="motion.detail_status">Статус лаунчера</span>
+                  <span class="detail-val font-mono text-emerald" id="motionDetailStatus" data-i18n="motion.detail_status_ok">Готов к установке</span>
+                </div>
+                <div class="path-detail-item" style="grid-column: 1 / -1; border-top: 1px dashed rgba(0, 229, 255, 0.2); padding-top: 0.5rem; margin-top: 0.25rem;">
+                  <span class="detail-label" style="color: #00e5ff;">Путь к игре (из лаунчера)</span>
+                  <span class="detail-val font-mono text-cyan" id="motionDetailGamePath" style="word-break: break-all;">Ожидание первого запуска...</span>
+                </div>
+              </div>
+
+              <!-- Game Folder Path Selector -->
+              <div style="margin-top: 1rem; padding: 0.85rem 1rem; background: rgba(0, 229, 255, 0.04); border: 1px solid rgba(0, 229, 255, 0.18); border-radius: 10px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2" style="width: 16px; height: 16px;">
+                      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <span class="font-heading" style="font-weight: 700; font-size: 0.88rem; color: #fff;" data-i18n="motion.game_path_title">Каталог игры Motion Project (GTA San Andreas)</span>
+                  </div>
+                  <span class="badge badge-neutral font-mono" id="motionGamePathBadge" style="font-size: 0.72rem;">Поиск...</span>
+                </div>
+
+                <div class="path-input-group">
+                  <div class="path-input-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2">
+                      <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                  </div>
+                  <input type="text" class="path-input font-mono" id="motionGamePathInput" placeholder="C:\games\motion\Motion Project" spellcheck="false">
+                  <button type="button" class="btn btn-primary path-btn" id="motionSaveGamePathBtn" title="Применить и зафиксировать путь к игре">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <span class="btn-text" data-i18n="motion.btn_apply">Применить</span>
+                  </button>
+                  <button type="button" class="btn btn-secondary path-btn" id="motionBrowseGamePathBtn" title="Выбрать папку с игрой на диске">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="11" cy="11" r="8"/>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <span class="btn-text" data-i18n="motion.btn_browse">Папка...</span>
+                  </button>
+                  <button type="button" class="btn btn-secondary path-btn" id="motionBrowseGameFileBtn" title="Выбрать исполняемый файл игры (motion.exe или samp.exe)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                      <polyline points="14 2 14 8 20 8"/>
+                      <line x1="16" y1="13" x2="8" y2="13"/>
+                      <line x1="16" y1="17" x2="8" y2="17"/>
+                      <polyline points="10 9 9 9 8 9"/>
+                    </svg>
+                    <span class="btn-text" data-i18n="motion.btn_choose_exe">Файл .exe</span>
+                  </button>
+                  <button type="button" class="btn btn-secondary path-btn" id="motionDetectGamePathBtn" title="Получить путь к игре из настроек официального лаунчера">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="23 4 23 10 17 10"/>
+                      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                    </svg>
+                    <span class="btn-text" data-i18n="motion.btn_from_launcher">Из лаунчера</span>
+                  </button>
+                  <button type="button" class="btn btn-ghost path-btn" id="motionOpenGameFolderBtn" title="Открыть папку с игрой в Проводнике">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                      <polyline points="15 3 21 3 21 9"/>
+                      <line x1="10" y1="14" x2="21" y2="3"/>
+                    </svg>
+                    <span class="btn-text" data-i18n="motion.btn_open_folder">Папка</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Game Directory & DLL Integrity Card -->
+              <div class="glass-card game-guard-card" id="gameGuardCard" style="margin-top: 1rem; padding: 1.1rem 1.25rem; border: 1px solid rgba(0, 229, 255, 0.25); background: rgba(11, 19, 36, 0.65); border-radius: 12px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 0.9rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 0.75rem;">
+                  <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div class="card-icon card-icon--gpu" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: rgba(0, 229, 255, 0.15); border-radius: 8px; border: 1px solid rgba(0, 229, 255, 0.3);">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2" style="width: 18px; height: 18px;">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        <path d="M9 12l2 2 4-4"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        <span class="font-heading" style="font-weight: 700; font-size: 0.95rem; color: #fff;" data-i18n="motion.game_guard_title">Защита папки игры, сверка веса DXVK и отпечаток</span>
+                        <span class="badge badge-success font-mono" id="gameGuardStatusBadge">АКТИВНА</span>
+                      </div>
+                      <span class="font-mono" style="font-size: 0.78rem; color: var(--color-text-muted);" id="gameGuardPathLabel">Каталог игры: C:\games\motion\Motion Project</span>
+                    </div>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-ghost btn-sm" id="gameGuardVerifyBtn" title="Проверить файлы игры и веса библиотек DXVK">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; margin-right: 4px;">
+                        <polyline points="23 4 23 10 17 10"/>
+                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                      </svg>
+                      <span data-i18n="motion.btn_verify_game">Проверить файлы</span>
+                    </button>
+                    <button type="button" class="btn btn-ghost btn-sm" id="gameGuardFingerprintBtn" title="Создать или обновить цифровой отпечаток файлов игры">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2" style="width: 14px; height: 14px; margin-right: 4px;">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                      </svg>
+                      <span data-i18n="motion.btn_update_fingerprint">Обновить отпечаток</span>
+                    </button>
+                  </div>
+                </div>
+                <div class="game-guard-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem;">
+                  <div class="guard-metric-item" style="padding: 0.65rem 0.85rem; background: rgba(255, 255, 255, 0.03); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.06);">
+                    <span style="display: block; font-size: 0.70rem; color: var(--color-text-muted); font-family: monospace; text-transform: uppercase;">Белый список EXE</span>
+                    <span class="font-mono text-emerald" id="gameGuardWhitelistVal" style="font-size: 0.84rem; font-weight: 600;">7 разрешённых EXE (Чисто)</span>
+                  </div>
+                  <div class="guard-metric-item" style="padding: 0.65rem 0.85rem; background: rgba(255, 255, 255, 0.03); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.06);">
+                    <span style="display: block; font-size: 0.70rem; color: var(--color-text-muted); font-family: monospace; text-transform: uppercase;">Вес d3d9.dll (32-бит)</span>
+                    <span class="font-mono text-cyan" id="gameGuardD3d9Val" style="font-size: 0.84rem; font-weight: 600;">DXVK 3.1.1 (7 856 142 Б)</span>
+                  </div>
+                  <div class="guard-metric-item" style="padding: 0.65rem 0.85rem; background: rgba(255, 255, 255, 0.03); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.06);">
+                    <span style="display: block; font-size: 0.70rem; color: var(--color-text-muted); font-family: monospace; text-transform: uppercase;">motion.exe (4 ГБ LAA)</span>
+                    <span class="font-mono text-emerald" id="gameGuardMotionLaaVal" style="font-size: 0.84rem; font-weight: 600;">Активен (0x12F)</span>
+                  </div>
+                  <div class="guard-metric-item" style="padding: 0.65rem 0.85rem; background: rgba(255, 255, 255, 0.03); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.06);">
+                    <span style="display: block; font-size: 0.70rem; color: var(--color-text-muted); font-family: monospace; text-transform: uppercase;">samp.exe (4 ГБ LAA)</span>
+                    <span class="font-mono text-emerald" id="gameGuardSampLaaVal" style="font-size: 0.84rem; font-weight: 600;">Активен (0x81AF)</span>
+                  </div>
+                  <div class="guard-metric-item" style="padding: 0.65rem 0.85rem; background: rgba(255, 255, 255, 0.03); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.06);">
+                    <span style="display: block; font-size: 0.70rem; color: var(--color-text-muted); font-family: monospace; text-transform: uppercase;">Отпечаток игры (Fingerprint)</span>
+                    <span class="font-mono text-cyan" id="gameGuardFingerprintVal" style="font-size: 0.84rem; font-weight: 600;">1 715 файлов (SHA-256)</span>
+                  </div>
+                  <div class="guard-metric-item" style="padding: 0.65rem 0.85rem; background: rgba(255, 255, 255, 0.03); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.06);">
+                    <span style="display: block; font-size: 0.70rem; color: var(--color-text-muted); font-family: monospace; text-transform: uppercase;">Сторонние файлы / DLL</span>
+                    <span class="font-mono text-emerald" id="gameGuardForeignFilesVal" style="font-size: 0.84rem; font-weight: 600;">Отсутствуют (Чисто)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Installation Options (DXVK Selection & 4GB RAM Patch) -->
+          <div class="studio-section">
+            <div class="studio-section-header">
+              <div class="section-title-wrap">
+                <span class="section-num font-mono">02</span>
+                <span class="section-title font-heading" data-i18n="motion.section2_title">Выбор пакета оптимизации (DXVK и патч 4 ГБ ОЗУ)</span>
+              </div>
+              <span class="badge badge-info font-mono" data-i18n="motion.options_badge">Настраиваемый профиль</span>
+            </div>
+
+            <div class="options-container">
+              <!-- Sub-part A: DXVK Version Choice -->
+              <div class="opt-group">
+                <div class="opt-group-header">
+                  <span class="opt-group-title font-mono" data-i18n="motion.dxvk_select_title">1. ВЫБОР ВЕРСИИ ТРАНСЛЯТОРА DXVK:</span>
+                  <span class="opt-group-hint" data-i18n="motion.dxvk_select_hint">Трансляция Direct3D 9 вызовов GTA SA в Vulkan WSI</span>
+                </div>
+
+                <div class="dxvk-selector-grid" id="dxvkVersionSelector">
+                  <label class="dxvk-radio-card active" data-version="3.1.1">
+                    <input type="radio" name="motionDxvkVer" value="3.1.1" checked>
+                    <div class="radio-card-body">
+                      <div class="radio-card-top">
+                        <span class="radio-card-ver font-mono">DXVK 3.1.1</span>
+                        <span class="badge badge-highlight font-mono" data-i18n="motion.badge_recommended">Рекомендуется</span>
+                      </div>
+                      <span class="radio-card-spec font-mono">Vulkan 1.3+ / Advanced Pipelines</span>
+                      <p class="radio-card-desc" data-i18n="motion.dxvk311_desc">Максимальный FPS, параллельная компиляция шейдеров и адаптация под современные GPU NVIDIA RTX/GTX.</p>
+                    </div>
+                  </label>
+
+                  <label class="dxvk-radio-card" data-version="3.0">
+                    <input type="radio" name="motionDxvkVer" value="3.0">
+                    <div class="radio-card-body">
+                      <div class="radio-card-top">
+                        <span class="radio-card-ver font-mono">DXVK 3.0</span>
+                        <span class="badge badge-info font-mono" data-i18n="motion.badge_stable">Стабильная</span>
+                      </div>
+                      <span class="radio-card-spec font-mono">Extended Dynamic State</span>
+                      <p class="radio-card-desc" data-i18n="motion.dxvk30_desc">Проверенная ветка с низким потреблением VRAM и поддержкой динамических состояний.</p>
+                    </div>
+                  </label>
+
+                  <label class="dxvk-radio-card" data-version="2.3">
+                    <input type="radio" name="motionDxvkVer" value="2.3">
+                    <div class="radio-card-body">
+                      <div class="radio-card-top">
+                        <span class="radio-card-ver font-mono">DXVK 2.3</span>
+                        <span class="badge badge-success font-mono" data-i18n="motion.badge_compat">Совместимая</span>
+                      </div>
+                      <span class="radio-card-spec font-mono">Vulkan 1.3 Baseline</span>
+                      <p class="radio-card-desc" data-i18n="motion.dxvk23_desc">Высокая стабильность для кастомных пост-шейдеров ENB, SkyGFX и старых плагинов ASI.</p>
+                    </div>
+                  </label>
+
+                  <label class="dxvk-radio-card" data-version="1.10.3">
+                    <input type="radio" name="motionDxvkVer" value="1.10.3">
+                    <div class="radio-card-body">
+                      <div class="radio-card-top">
+                        <span class="radio-card-ver font-mono">DXVK 1.10.3</span>
+                        <span class="badge badge-ghost font-mono" data-i18n="motion.badge_legacy">Легаси</span>
+                      </div>
+                      <span class="radio-card-spec font-mono">Vulkan 1.1 (Legacy D3D9)</span>
+                      <p class="radio-card-desc" data-i18n="motion.dxvk1103_desc">Классическая версия для максимальной совместимости со старыми видеокартами.</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Sub-part B: 4GB RAM Patch (Large Address Aware) -->
+              <div class="opt-group">
+                <div class="opt-group-header">
+                  <span class="opt-group-title font-mono" data-i18n="motion.laa_title">2. ПАТЧ 4 ГБ ОЗУ (LARGE ADDRESS AWARE):</span>
+                  <span class="opt-group-hint" data-i18n="motion.laa_hint">Устранение крашей при нехватке 2 ГБ виртуальной памяти</span>
+                </div>
+
+                <div class="laa-toggle-card">
+                  <label class="laa-card-content" for="motionEnable4gbPatch">
+                    <div class="laa-card-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+                        <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+                        <line x1="6" y1="6" x2="6.01" y2="6"/>
+                        <line x1="6" y1="18" x2="6.01" y2="18"/>
+                      </svg>
+                    </div>
+                    <div class="laa-card-text">
+                      <div class="laa-card-title-row">
+                        <span class="laa-card-title font-heading" data-i18n="motion.laa_checkbox_title">Активировать патч 4 ГБ ОЗУ (Large Address Aware / LAA Flag)</span>
+                        <span class="badge badge-accent font-mono" data-i18n="motion.laa_badge">Критически важно</span>
+                      </div>
+                      <p class="laa-card-desc" data-i18n="motion.laa_checkbox_desc">По умолчанию 32-битный движок GTA SA ограничен 2 ГБ оперативной памяти. Данный патч устанавливает флаг IMAGE_FILE_LARGE_ADDRESS_AWARE, расширяя доступный лимит до 4 ГБ, что полностью исключает вылеты 'Warning: Low memory' и зависания при загрузке тяжелых HD-моделей автомобилей и скинов в Motion Project.</p>
+                    </div>
+                    <div class="laa-switch-wrap">
+                      <input type="checkbox" id="motionEnable4gbPatch" class="toggle-checkbox" checked>
+                      <span class="toggle-slider"></span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Sub-part C: Frame Rate Limiter (Dedicated Card) -->
+              <div class="opt-group">
+                <div class="opt-group-header">
+                  <span class="opt-group-title font-mono" data-i18n="motion.limiter_section_title">3. ОГРАНИЧЕНИЕ КАДРОВОЙ ЧАСТОТЫ (FPS LIMITER):</span>
+                  <span class="opt-group-hint" data-i18n="motion.limiter_section_hint">Параметр maxFrameRate для Direct3D 9 / Vulkan</span>
+                </div>
+
+                <div class="limiter-config-card glass-card">
+                  <div class="limiter-config-top">
+                    <label class="limiter-toggle-label" for="motionEnableFpsLimit">
+                      <div class="switch-wrap">
+                        <input type="checkbox" id="motionEnableFpsLimit" class="toggle-checkbox" checked>
+                        <span class="toggle-slider"></span>
+                      </div>
+                      <div class="limiter-title-wrap">
+                        <span class="limiter-title font-heading" data-i18n="motion.fps_limit_title">Активировать встроенный ограничитель кадров</span>
+                        <span class="limiter-subtext" data-i18n="motion.fps_limit_desc">Устраняет разрывы кадров, скачки фреймтайма и снижает нагрузку на видеокарту</span>
+                      </div>
+                    </label>
+                    <span class="badge badge-success font-mono" id="limiterTargetBadge">200 FPS</span>
+                  </div>
+
+                  <div class="limiter-body" id="limiterBody">
+                    <div class="limiter-controls-row">
+                      <div class="limiter-input-field">
+                        <span class="limiter-field-label font-mono" data-i18n="motion.fps_input_label">ЛИМИТ FPS:</span>
+                        <div class="fps-input-box">
+                          <input type="number" class="fps-input font-mono" id="motionMaxFpsInput" value="200" min="30" max="1000" step="10">
+                          <span class="fps-unit font-mono">FPS</span>
+                        </div>
+                      </div>
+
+                      <div class="limiter-presets">
+                        <span class="limiter-presets-label font-mono" data-i18n="motion.fps_presets_label">ПРЕСЕТЫ:</span>
+                        <div class="fps-preset-chips" id="fpsPresetChips">
+                          <button type="button" class="btn btn-ghost fps-preset-btn" data-fps="60">60</button>
+                          <button type="button" class="btn btn-ghost fps-preset-btn" data-fps="120">120</button>
+                          <button type="button" class="btn btn-ghost fps-preset-btn" data-fps="144">144</button>
+                          <button type="button" class="btn btn-ghost fps-preset-btn" data-fps="240">240</button>
+                          <button type="button" class="btn btn-ghost fps-preset-btn active" id="fpsPresetAutoMonitor" data-fps="200">
+                            <span id="fpsPresetAutoHz">200</span> <span data-i18n="motion.fps_monitor_suffix">(Монитор)</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="limiter-info-banner font-mono">
+                      <span class="info-icon">ℹ</span>
+                      <span id="limiterSyntaxHint">DXVK 2.3+: dxvk.maxFrameRate = 200 | DXVK 1.10.3: d3d9.maxFrameRate = 200 (для экрана 200 Hz)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Sub-part D: Informative HUD Customization (Purely HUD) -->
+              <div class="opt-group">
+                <div class="opt-group-header">
+                  <span class="opt-group-title font-mono" data-i18n="motion.hud_section_title">4. НАСТРОЙКА ИНФОРМАТИВНОГО HUD (DXVK.HUD):</span>
+                  <span class="opt-group-hint" data-i18n="motion.hud_section_hint">Экранный оверлей мониторинга производительности</span>
+                </div>
+
+                <div class="hud-config-card glass-card">
+                  <div class="hud-config-top">
+                    <label class="hud-toggle-label" for="motionEnableHud">
+                      <div class="switch-wrap">
+                        <input type="checkbox" id="motionEnableHud" class="toggle-checkbox" checked>
+                        <span class="toggle-slider"></span>
+                      </div>
+                      <span class="hud-toggle-title font-heading" data-i18n="motion.hud_toggle_title">Отображать экранный оверлей (dxvk.hud)</span>
+                    </label>
+                    <span class="badge badge-cyan font-mono" id="hudPreviewBadge">dxvk.hud = version,fps,gpuload,memory</span>
+                  </div>
+
+                  <div class="hud-options-body" id="hudOptionsBody">
+                    <div class="hud-elements-row">
+                      <span class="hud-sublabel font-mono" data-i18n="motion.hud_elements_label">ЭЛЕМЕНТЫ ОВЕРЛЕЯ:</span>
+                      <div class="hud-chips-wrap">
+                        <label class="hud-chip">
+                          <input type="checkbox" class="hud-elem-cb" value="version" checked>
+                          <span class="hud-chip-btn font-mono">version</span>
+                        </label>
+                        <label class="hud-chip">
+                          <input type="checkbox" class="hud-elem-cb" value="fps" checked>
+                          <span class="hud-chip-btn font-mono">fps</span>
+                        </label>
+                        <label class="hud-chip">
+                          <input type="checkbox" class="hud-elem-cb" value="gpuload" checked>
+                          <span class="hud-chip-btn font-mono">gpuload</span>
+                        </label>
+                        <label class="hud-chip">
+                          <input type="checkbox" class="hud-elem-cb" value="memory" checked>
+                          <span class="hud-chip-btn font-mono">memory</span>
+                        </label>
+                        <label class="hud-chip">
+                          <input type="checkbox" class="hud-elem-cb" value="frametimes">
+                          <span class="hud-chip-btn font-mono">frametimes</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div class="hud-params-grid">
+                      <div class="hud-param-box">
+                        <div class="hud-param-header">
+                          <span class="hud-param-label font-mono" data-i18n="motion.hud_scale_label">МАСШТАБ ШРИФТА (dxvk.hudScale)</span>
+                          <span class="hud-param-val font-mono" id="hudScaleVal">0.75</span>
+                        </div>
+                        <input type="range" class="hud-slider" id="motionHudScaleSlider" min="0.5" max="1.5" step="0.05" value="0.75">
+                        <span class="hud-param-hint" data-i18n="motion.hud_scale_hint">Значение 0.75 делает оверлей мелким и не закрывающим игровой чат</span>
+                      </div>
+
+                      <div class="hud-param-box">
+                        <div class="hud-param-header">
+                          <span class="hud-param-label font-mono" data-i18n="motion.hud_coords_label">КООРДИНАТЫ HUD (dxvk.hudX / hudY)</span>
+                        </div>
+                        <div class="hud-coords-inputs">
+                          <div class="coord-field">
+                            <span class="coord-label font-mono">X:</span>
+                            <input type="number" class="coord-input font-mono" id="motionHudXInput" value="1800" min="0" max="3840" step="10">
+                          </div>
+                          <div class="coord-field">
+                            <span class="coord-label font-mono">Y:</span>
+                            <input type="number" class="coord-input font-mono" id="motionHudYInput" value="20" min="0" max="2160" step="5">
+                          </div>
+                          <div class="coord-presets">
+                            <button type="button" class="btn btn-ghost coord-preset-btn active" data-x="1800" data-y="20">1800, 20 (Топ-Право)</button>
+                            <button type="button" class="btn btn-ghost coord-preset-btn" data-x="20" data-y="20">20, 20 (Топ-Лево)</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Sub-part E: Seamless and VSync Tweaks -->
+              <div class="opt-group">
+                <div class="opt-group-header">
+                  <span class="opt-group-title font-mono" data-i18n="motion.tweaks_title">5. ПАРАМЕТРЫ БЕСШОВНОСТИ И V-SYNC (DXVK.CONF):</span>
+                </div>
+
+                <div class="tweaks-grid">
+                  <label class="tweak-item" for="motionSeamless">
+                    <input type="checkbox" id="motionSeamless" checked>
+                    <div class="tweak-text">
+                      <span class="tweak-name font-mono">d3d9.seamless = True</span>
+                      <span class="tweak-desc" data-i18n="motion.tweak_seamless_desc">Бесшовное переключение окон и альт-таб без сброса D3D9 девайса и крашей шрифтов.</span>
+                    </div>
+                  </label>
+
+                  <label class="tweak-item" for="motionTearFree">
+                    <input type="checkbox" id="motionTearFree" checked>
+                    <div class="tweak-text">
+                      <span class="tweak-name font-mono" id="tearFreeOrLatencyLabel">dxvk.tearFree = True & syncInterval = 0</span>
+                      <span class="tweak-desc" data-i18n="motion.tweak_tearfree_desc">Устранение разрывов кадра и минимальная очередь кадров (нулевой инпут-лаг).</span>
+                    </div>
+                  </label>
+
+                  <label class="tweak-item" for="motionPresentInterval">
+                    <input type="checkbox" id="motionPresentInterval" checked>
+                    <div class="tweak-text">
+                      <span class="tweak-name font-mono">d3d9.presentInterval = 0 & syncInterval = 0</span>
+                      <span class="tweak-desc" data-i18n="motion.tweak_vsync_desc">Полное отключение вертикальной синхронизации на уровне Direct3D 9 и Vulkan.</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 3: Actions & Terminal Log -->
+          <div class="studio-section">
+            <div class="studio-section-header">
+              <div class="section-title-wrap">
+                <span class="section-num font-mono">03</span>
+                <span class="section-title font-heading" data-i18n="motion.section3_title">Установка и протокол действий</span>
+              </div>
+            </div>
+
+            <!-- Patcher & Daemon Status Banner -->
+            <div class="patcher-status-banner glass-card" style="margin-bottom: 1.25rem; padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(0, 229, 255, 0.25); background: rgba(11, 15, 25, 0.65);">
+              <div style="display: flex; align-items: center; gap: 0.85rem;">
+                <span class="status-dot-inline status-dot--ready" style="width: 10px; height: 10px; box-shadow: 0 0 10px #00e5ff;"></span>
+                <div>
+                  <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <span class="font-heading" id="motionPatchStatusTitle" style="font-size: 0.95rem; font-weight: 600; color: #fff;">Статус лаунчера: Проверяется...</span>
+                    <span class="badge badge-muted font-mono" id="motionGuardBadge" style="font-size: 0.72rem;">Защита: Проверка</span>
+                    <span class="badge badge-muted font-mono" id="motionIntegrityBadge" style="font-size: 0.72rem;">Отпечаток: Проверка</span>
+                    <span class="badge badge-warning font-mono" id="motionInstallPrereqBadge" style="font-size: 0.72rem;">Требуется патчинг лаунчера</span>
+                  </div>
+                  <span class="font-mono" id="motionPatchStatusDesc" style="font-size: 0.76rem; color: var(--color-text-muted);">Фоновая служба SAPatcher (порт 49742) активна и контролирует целостность</span>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <button type="button" class="btn btn-ghost btn-sm" id="motionTestWidgetBtn" title="Проверить 5-секундный всплывающий виджет">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; margin-right: 4px;">
+                    <rect x="2" y="3" width="20" height="14" rx="2"></rect>
+                    <line x1="8" y1="21" x2="16" y2="21"></line>
+                    <line x1="12" y1="17" x2="12" y2="21"></line>
+                  </svg>
+                  <span data-i18n="motion.btn_test_widget">Тест виджета (5 сек)</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="studio-actions-bar" style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+              <button type="button" class="btn btn-primary btn-lg" id="motionPatchBtn" style="background: linear-gradient(135deg, #00E5FF, #7000FF); border: none; color: #fff; font-weight: 600;">
+                <span class="btn-loader"></span>
+                <span class="btn-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <path d="M9 12l2 2 4-4"/>
+                  </svg>
+                </span>
+                <span class="btn-text" data-i18n="motion.btn_patch">Распаковать и пропатчить лаунчер</span>
+              </button>
+
+              <button type="button" class="btn btn-secondary btn-lg btn-disabled" id="motionInstallBtn" disabled title="Сначала необходимо распаковать и пропатчить лаунчер">
+                <span class="btn-loader"></span>
+                <span class="btn-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                </span>
+                <span class="btn-text" data-i18n="motion.btn_install">Установить DXVK и патч 4 ГБ ОЗУ</span>
+              </button>
+
+              <button type="button" class="btn btn-secondary" id="motionRestoreBtn">
+                <span class="btn-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="1 4 1 10 7 10"/>
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                  </svg>
+                </span>
+                <span class="btn-text" data-i18n="motion.btn_restore">Восстановить оригиналы</span>
+              </button>
+
+              <button type="button" class="btn btn-ghost" id="motionLaunchBtn">
+                <span class="btn-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                  </svg>
+                </span>
+                <span class="btn-text" data-i18n="motion.btn_launch">Запустить Motion Launcher</span>
+              </button>
+            </div>
+
+            <!-- Terminal Output -->
+            <div class="motion-terminal-box">
+              <div class="terminal-bar">
+                <div class="terminal-dots">
+                  <span class="terminal-dot terminal-dot--red"></span>
+                  <span class="terminal-dot terminal-dot--yellow"></span>
+                  <span class="terminal-dot terminal-dot--green"></span>
+                </div>
+                <span class="terminal-title font-mono">SAPatcher Console • Motion Project Studio</span>
+                <button type="button" class="terminal-clear-btn font-mono" id="motionClearTerminalBtn" title="Очистить консоль">clear</button>
+              </div>
+              <div class="terminal-body font-mono" id="motionTerminalLog">
+                <div class="log-line log-line--info">[SYSTEM] Модуль Motion Project успешно инициализирован.</div>
+                <div class="log-line log-line--detect">[DETECT] Поиск Motion Launcher по стандартному пути: %LOCALAPPDATA%\motion-launcher\Motion Launcher.exe</div>
+                <div class="log-line log-line--success">[FOUND] Лаунчер обнаружен: C:\Users\Gigabyte A320M-H\AppData\Local\motion-launcher\Motion Launcher.exe</div>
+                <div class="log-line log-line--info">[STATUS] Версия Squirrel: 1.2.46 | Размер: 381.5 КБ | Готов к инъекции.</div>
+                <div class="log-line log-line--hint">[READY] Выберите версию DXVK (3.1.1 / 3.0 / 2.3 / 1.10.3) и патч 4GB, затем нажмите кнопку «Установить».</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <dialog class="confirm-dialog" id="confirmDialog">
+    <div class="dialog-card glass-card">
+      <div class="dialog-icon-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </div>
+      <h3 class="dialog-title font-heading" id="confirmDialogTitle" data-i18n="dialogs.confirm_title">Подтверждение действия</h3>
+      <p class="dialog-message" id="confirmDialogMessage"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" id="confirmDialogCancelBtn" data-i18n="dialogs.cancel">Отмена</button>
+        <button type="button" class="btn btn-primary" id="confirmDialogOkBtn">
+          <span class="btn-text" data-i18n="dialogs.proceed">Продолжить</span>
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="error-dialog" id="errorDialog">
+    <div class="dialog-card glass-card">
+      <div class="dialog-icon-circle dialog-icon-circle--alert">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <div class="dialog-code font-mono" id="errorDialogCode">Error Code: SAP-4041</div>
+      <h3 class="dialog-title font-heading" id="errorDialogTitle" data-i18n="dialogs.error_title">Системное уведомление</h3>
+      <p class="dialog-message" id="errorDialogMessage"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-secondary" id="errorDialogCloseBtn" data-i18n="dialogs.close">Закрыть</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
