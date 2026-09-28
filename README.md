@@ -110,4 +110,4 @@
 - **Разработка**: [PixelSmith Studio](https://pixelsmith.ru)
 - **Основной сайт студии**: [pixelsmith.ru](https://pixelsmith.ru)
 - **Репозиторий**: [github.com/PassatB5By/SAPatch](https://github.com/PassatB5By/SAPatch)
-- **Лицензия**: MIT License
+- **Лицензия**: [GNU General Public License v3.0](https://github.com/PassatB5By/SAPatch/blob/main/LICENSE)
