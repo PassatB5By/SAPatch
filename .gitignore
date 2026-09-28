@@ -1,0 +1,11 @@
+bin/
+obj/
+SecuritySource/
+*.Security.*
+motion/
+dxvk-*/
+*.tar.gz
+scratch/
+settings.json
+SAPatcher_Diagnostics_Report.html
+*.log

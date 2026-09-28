@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAPatcher — Next-Gen Motion Project Optimizer & DXVK Engine</title>
+  <meta name="description" content="Official website for SAPatcher. High-performance DXVK Vulkan renderer, 4GB LAA memory unlocker, and seamless launcher integration for Motion Project.">
+  <meta name="keywords" content="SAPatcher, Motion Project, DXVK, Vulkan, GTA SA, SAMP, 4GB Patch, LAA, FPS Boost, Optimizer">
+  <meta name="theme-color" content="#090c10">
+
+  <!-- Open Graph / Social Media -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="SAPatcher — Next-Gen Motion Project Optimizer">
+  <meta property="og:description" content="Boost FPS, eliminate memory crashes with 4GB LAA, and unlock DXVK Vulkan in Motion Project.">
+  <meta property="og:url" content="https://passatb5by.github.io/SAPatch/">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Ambient background canvas -->
+  <div class="bg-network">
+    <canvas id="particleCanvas"></canvas>
+    <div class="radial-glow glow-1"></div>
+    <div class="radial-glow glow-2"></div>
+    <div class="radial-glow glow-3"></div>
+  </div>
+
+  <!-- Header / Navigation -->
+  <header class="navbar">
+    <div class="container nav-container">
+      <div class="logo-group">
+        <div class="logo-icon">
+          <span>SA</span>
+        </div>
+        <div class="logo-text">
+          <span class="logo-title">SAPatcher</span>
+          <span class="logo-badge" id="navVersionBadge">v1.0.0</span>
+        </div>
+      </div>
+
+      <nav class="nav-links">
+        <a href="#features" data-i18n="nav.features">Возможности</a>
+        <a href="#specs" data-i18n="nav.specs">Совместимость</a>
+        <a href="#reviews" data-i18n="nav.reviews">Отзывы</a>
+        <a href="#faq" data-i18n="nav.faq">FAQ</a>
+      </nav>
+
+      <div class="nav-actions">
+        <!-- Language Switcher -->
+        <div class="lang-switch" id="langSwitch">
+          <button type="button" class="lang-btn active" data-lang="ru">RU</button>
+          <button type="button" class="lang-btn" data-lang="en">EN</button>
+        </div>
+
+        <a href="https://github.com/PassatB5By/SAPatch" target="_blank" rel="noopener noreferrer" class="btn btn-github">
+          <svg class="icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+          <span>GitHub</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="container hero-container">
+      <div class="hero-badge">
+        <span class="status-dot"></span>
+        <span data-i18n="hero.badge">Официальный релиз оптимизатора Motion Project</span>
+      </div>
+
+      <h1 class="hero-title">
+        <span class="gradient-text" data-i18n="hero.titleGradient">SAPatcher</span>
+        <span class="title-sub" data-i18n="hero.titleSub">Максимальный FPS и стабильность для Motion</span>
+      </h1>
+
+      <p class="hero-desc" data-i18n="hero.description">
+        Универсальный инструмент тонкой настройки и модернизации: трансляция графики Direct3D 9 в Vulkan (DXVK), снятие лимита 2GB памяти (4GB LAA Patch), устранение вылетов Out Of Memory и аппаратная диагностика ПК.
+      </p>
+
+      <div class="hero-buttons">
+        <a id="btnDownloadLatest" href="https://github.com/PassatB5By/SAPatch/releases/latest" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-glow">
+          <svg class="icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <div class="btn-text-group">
+            <span class="btn-title" data-i18n="hero.btnDownload">Скачать SAPatcher</span>
+            <span class="btn-subtitle" id="releaseInfoText" data-i18n="hero.btnSub">GitHub Release • Windows x64</span>
+          </div>
+        </a>
+
+        <a href="#reviews" class="btn btn-secondary">
+          <svg class="icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+          </svg>
+          <span data-i18n="hero.btnReviews">Отзывы сообщества</span>
+        </a>
+      </div>
+
+      <!-- Quick Metrics Grid -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-value">+40-120%</div>
+          <div class="metric-label" data-i18n="hero.metricFps">Прирост стабильности FPS</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">4 GB</div>
+          <div class="metric-label" data-i18n="hero.metricRam">LAA Адресация памяти</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">0 Crashes</div>
+          <div class="metric-label" data-i18n="hero.metricCrash">Защита от Out Of Memory</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">1 Click</div>
+          <div class="metric-label" data-i18n="hero.metricInstall">Авто-установка и фикс API</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section id="features" class="section">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title gradient-text" data-i18n="features.title">Ключевые технологии</h2>
+        <p class="section-subtitle" data-i18n="features.subtitle">Архитектура глубокой интеграции для идеального игрового опыта</p>
+      </div>
+
+      <div class="features-grid">
+        <!-- Feature 1 -->
+        <div class="feature-card">
+          <div class="feature-icon icon-cyan">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+          </div>
+          <h3 class="feature-title" data-i18n="features.dxvk.title">DXVK Vulkan Революция</h3>
+          <p class="feature-desc" data-i18n="features.dxvk.desc">
+            Трансляция устаревших инструкций Direct3D 9 в современный низкоуровневый Vulkan API. Избавляет от микрофризов, разрывов кадров и равномерно распределяет нагрузку на GPU.
+          </p>
+          <div class="feature-tags">
+            <span class="tag">v1.10.3</span>
+            <span class="tag">v2.3</span>
+            <span class="tag">v3.0</span>
+            <span class="tag tag-accent">v3.1.1 Async</span>
+          </div>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="feature-card">
+          <div class="feature-icon icon-purple">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+              <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+              <line x1="6" y1="6" x2="6.01" y2="6"></line>
+              <line x1="6" y1="18" x2="6.01" y2="18"></line>
+            </svg>
+          </div>
+          <h3 class="feature-title" data-i18n="features.laa.title">Патч 4 ГБ памяти (LAA)</h3>
+          <p class="feature-desc" data-i18n="features.laa.desc">
+            Снимает стандартный лимит 2048 МБ 32-битного движка GTA SA. Игра получает доступ к полным 4 ГБ виртуального адресного пространства для текстур, скинов и кастомного транспорта.
+          </p>
+          <div class="feature-tags">
+            <span class="tag">motion.exe</span>
+            <span class="tag">samp.exe</span>
+            <span class="tag tag-accent">Anti-Crash</span>
+          </div>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="feature-card">
+          <div class="feature-icon icon-emerald">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+          </div>
+          <h3 class="feature-title" data-i18n="features.guard.title">Launcher Integration & Daemon</h3>
+          <p class="feature-desc" data-i18n="features.guard.desc">
+            Фоновая служба следит за авторизацией процесса, предотвращает авто-сброс модификаций встроенным загрузчиком и синхронизирует сетевое API без ошибок 401 Unauthorized.
+          </p>
+          <div class="feature-tags">
+            <span class="tag">Daemon Port 49742</span>
+            <span class="tag">Tray Icon</span>
+            <span class="tag">Auto-Reconnect</span>
+          </div>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="feature-card">
+          <div class="feature-icon icon-amber">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </div>
+          <h3 class="feature-title" data-i18n="features.diag.title">Самодиагностика и отчёты</h3>
+          <p class="feature-desc" data-i18n="features.diag.desc">
+            Встроенный генератор HTML-отчёта диагностирует поддержку Vulkan драйвером вашей видеокарты, статус LAA-флагов, целостность dll-библиотек и формирует готовый лог для решения проблем.
+          </p>
+          <div class="feature-tags">
+            <span class="tag">HTML Report</span>
+            <span class="tag">Vulkan Audit</span>
+            <span class="tag">One-Click</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- System Specifications -->
+  <section id="specs" class="section specs-section">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title gradient-text" data-i18n="specs.title">Системные требования и рекомендации</h2>
+        <p class="section-subtitle" data-i18n="specs.subtitle">Выберите оптимальную версию DXVK для вашей видеокарты</p>
+      </div>
+
+      <div class="specs-grid">
+        <div class="spec-card">
+          <div class="spec-badge badge-green">Recommended</div>
+          <h3 class="spec-title">DXVK 3.1.1 / 3.0</h3>
+          <p class="spec-desc" data-i18n="specs.recModern">Для современных видеокарт (NVIDIA GTX 10xx+, RTX, AMD RX 5000/6000/7000, Intel Arc). Максимальный FPS, асинхронные шейдеры, Vulkan 1.3+.</p>
+        </div>
+
+        <div class="spec-card">
+          <div class="spec-badge badge-blue">High Compatibility</div>
+          <h3 class="spec-title">DXVK 2.3</h3>
+          <p class="spec-desc" data-i18n="specs.recBalanced">Идеальный баланс совместимости и стабильности. Подходит для NVIDIA GTX 9xx/7xx и AMD RX 4xx/5xx.</p>
+        </div>
+
+        <div class="spec-card">
+          <div class="spec-badge badge-amber">Legacy GPUs</div>
+          <h3 class="spec-title">DXVK 1.10.3</h3>
+          <p class="spec-desc" data-i18n="specs.recLegacy">Для старых видеокарт и встроенной графики (Vulkan 1.1). Минимальные системные требования.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Reviews & Community Feedback Section -->
+  <section id="reviews" class="section reviews-section">
+    <div class="container">
+      <div class="section-header">
+        <div class="review-header-flex">
+          <div>
+            <h2 class="section-title gradient-text" data-i18n="reviews.title">Отзывы пользователей</h2>
+            <p class="section-subtitle" data-i18n="reviews.subtitle">Реальные отзывы игроков Motion Project, загружаемые напрямую из GitHub</p>
+          </div>
+          <button type="button" id="btnOpenReviewModal" class="btn btn-primary">
+            <svg class="icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20h9"></path>
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+            </svg>
+            <span data-i18n="reviews.btnWrite">Написать отзыв</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Reviews Feed -->
+      <div id="reviewsContainer" class="reviews-grid">
+        <div class="loading-spinner-wrapper">
+          <div class="spinner"></div>
+          <span data-i18n="reviews.loading">Загрузка отзывов из GitHub Issues...</span>
+        </div>
+      </div>
+
+      <!-- Call to Action Banner -->
+      <div class="reviews-cta-card">
+        <div class="reviews-cta-content">
+          <h3 data-i18n="reviews.ctaTitle">Играете с SAPatcher? Поделитесь впечатлениями!</h3>
+          <p data-i18n="reviews.ctaSubtitle">Ваш отзыв публикуется в официальном репозитории с меткой <code>feedback</code> и помогает развивать проект.</p>
+        </div>
+        <button type="button" class="btn btn-primary btnOpenReviewModalTrigger" data-i18n="reviews.ctaBtn">Оставить отзыв</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ Section -->
+  <section id="faq" class="section">
+    <div class="container faq-container">
+      <div class="section-header">
+        <h2 class="section-title gradient-text" data-i18n="faq.title">Часто задаваемые вопросы</h2>
+      </div>
+
+      <div class="faq-accordion">
+        <div class="faq-item">
+          <button class="faq-question">
+            <span data-i18n="faq.q1">Банят ли за использование SAPatcher?</span>
+            <span class="faq-icon">+</span>
+          </button>
+          <div class="faq-answer">
+            <p data-i18n="faq.a1">Нет. SAPatcher — это графический оптимизатор и расширитель памяти. Он не содержит читов, инжекторов стороннего кода или запрещённых модификаций, сохраняя 100% совместимость с античитом Motion Project.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            <span data-i18n="faq.q2">Что делать, если при запуске чёрный экран или вылет?</span>
+            <span class="faq-icon">+</span>
+          </button>
+          <div class="faq-answer">
+            <p data-i18n="faq.a2">Попробуйте переключить версию DXVK в SAPatcher на более раннюю (например, 2.3 или 1.10.3), либо обновите видеодрайвер. Также используйте встроенную кнопку «Генерация отчёта диагностики» для выявления несовместимостей.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            <span data-i18n="faq.q3">Как вернуть оригинальный лаунчер без изменений?</span>
+            <span class="faq-icon">+</span>
+          </button>
+          <div class="faq-answer">
+            <p data-i18n="faq.a3">В интерфейсе SAPatcher нажмите кнопку «Откатить лаунчер». Программа восстановит оригинальный немодифицированный app.asar из резервной копии.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container footer-container">
+      <div class="footer-left">
+        <div class="logo-group">
+          <div class="logo-icon small"><span>SA</span></div>
+          <span class="logo-title">SAPatcher</span>
+        </div>
+        <p class="footer-copy">
+          © 2026 SAPatcher Team. Open Source Core under MIT License.
+        </p>
+      </div>
+
+      <div class="footer-links">
+        <a href="https://github.com/PassatB5By/SAPatch" target="_blank" rel="noopener noreferrer">GitHub Repo</a>
+        <a href="https://github.com/PassatB5By/SAPatch/releases" target="_blank" rel="noopener noreferrer">Releases</a>
+        <a href="https://github.com/PassatB5By/SAPatch/issues" target="_blank" rel="noopener noreferrer">Issues & Feedback</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Write Review Modal -->
+  <div id="reviewModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <h3 class="modal-title" data-i18n="modal.title">Написать отзыв о SAPatcher</h3>
+          <p class="modal-desc" data-i18n="modal.desc">Отзыв будет опубликован в GitHub Issues с меткой «feedback»</p>
+        </div>
+        <button type="button" id="btnCloseReviewModal" class="btn-close">&times;</button>
+      </div>
+
+      <form id="reviewForm" class="review-form">
+        <!-- Rating Stars -->
+        <div class="form-group">
+          <label class="form-label" data-i18n="modal.ratingLabel">Оценка:</label>
+          <div class="star-rating" id="starRating">
+            <button type="button" class="star-btn" data-value="1">★</button>
+            <button type="button" class="star-btn" data-value="2">★</button>
+            <button type="button" class="star-btn" data-value="3">★</button>
+            <button type="button" class="star-btn" data-value="4">★</button>
+            <button type="button" class="star-btn active" data-value="5">★</button>
+          </div>
+          <input type="hidden" id="reviewRatingInput" value="5">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label class="form-label" for="reviewAuthor" data-i18n="modal.authorLabel">Ваше имя или ник:</label>
+            <input type="text" id="reviewAuthor" class="form-input" placeholder="e.g. Alex_Driver" required>
+          </div>
+
+          <div class="form-group flex-1">
+            <label class="form-label" for="reviewCategory" data-i18n="modal.categoryLabel">Любимая функция:</label>
+            <select id="reviewCategory" class="form-input">
+              <option value="DXVK Vulkan FPS Boost">DXVK Vulkan (FPS Boost)</option>
+              <option value="4GB RAM Memory Patch">4GB RAM Patch (No Crashes)</option>
+              <option value="Launcher Integration">Launcher Integration & Daemon</option>
+              <option value="Diagnostics & Reports">Diagnostics & Reports</option>
+              <option value="General Overall">Overall Experience</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="reviewTitle" data-i18n="modal.summaryLabel">Краткий заголовок:</label>
+          <input type="text" id="reviewTitle" class="form-input" placeholder="e.g. Плавный FPS и исчезли фризы на сервере!" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="reviewPros" data-i18n="modal.prosLabel">Что понравилось (Плюсы):</label>
+          <input type="text" id="reviewPros" class="form-input" placeholder="e.g. Высокий FPS, лёгкая установка в один клик">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="reviewBody" data-i18n="modal.commentLabel">Подробный комментарий:</label>
+          <textarea id="reviewBody" rows="4" class="form-input form-textarea" placeholder="Расскажите о вашем игровом опыте, стабильности, FPS до и после патча..." required></textarea>
+        </div>
+
+        <!-- Submission Options -->
+        <div class="modal-footer">
+          <div class="auth-notice">
+            <span class="auth-icon">ℹ️</span>
+            <span data-i18n="modal.authNotice">Публикация происходит через GitHub с вашим профилем.</span>
+          </div>
+          <button type="submit" class="btn btn-primary btn-submit-review">
+            <svg class="icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+              <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+            </svg>
+            <span data-i18n="modal.btnPublish">Опубликовать в GitHub</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
