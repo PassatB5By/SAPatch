@@ -522,14 +522,10 @@ function setupReviewModal() {
       throw new Error(`HTTP ${res.status}`);
     } catch (err) {
       if (alertBox) {
-        alertBox.className = 'modal-status-alert info';
+        alertBox.className = 'modal-status-alert error';
         alertBox.innerHTML = `
-          <strong>💡 ${isRu ? 'GitHub Access шлюз' : 'GitHub Access Gateway'}</strong><br>
-          ${isRu ? 'Серверный шлюз pixelsmith.ru настраивается. Вы можете отправить отзыв разработчикам прямо на Email или открыть в GitHub:' : 'The server gateway is initializing. You can email your review directly to developers or submit via GitHub:'}
-          <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
-            <a href="mailto:contact@pixelsmith.ru?subject=${encodeURIComponent('[SAPatcher Review] ' + title)}&body=${encodeURIComponent(guestIssueBody)}" class="btn btn-primary" style="padding: 6px 12px; font-size: 12px; text-decoration: none;">✉️ Email PixelSmith</a>
-            <a href="${fallbackIssueUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; text-decoration: none;">🐙 GitHub Issue</a>
-          </div>
+          <strong>⚠️ ${isRu ? 'Шлюз GitHub Access не ответил' : 'GitHub Access Gateway Error'}</strong><br>
+          ${isRu ? 'Чтобы бот автоматически создал отзыв в GitHub Issues, убедитесь, что скрипт <code>review.php</code> с токеном GitHub Access загружен на ваш сервер <code>pixelsmith.ru/api/review.php</code>.' : 'To automatically publish reviews directly to GitHub Issues, ensure the <code>review.php</code> script with your GitHub Access token is uploaded to <code>pixelsmith.ru/api/review.php</code>.'}
         `;
         alertBox.style.display = 'block';
       }
