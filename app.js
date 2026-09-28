@@ -207,13 +207,14 @@ async function fetchReviews() {
       return;
     }
 
-    // Filter ONLY real reviews matching "отзыв" or "feedback" labels
+    // Filter reviews by [REVIEW] title prefix or labels
     const reviewIssues = issues.filter(iss => {
-      if (!iss.labels || !Array.isArray(iss.labels)) return false;
-      return iss.labels.some(l => {
+      const isReviewTitle = (iss.title || '').trim().toUpperCase().startsWith('[REVIEW]');
+      const hasReviewLabel = iss.labels && Array.isArray(iss.labels) && iss.labels.some(l => {
         const name = (l.name || '').toLowerCase();
         return name === 'отзыв' || name === 'feedback' || name === 'review';
       });
+      return isReviewTitle || hasReviewLabel;
     });
 
     if (reviewIssues.length === 0) {
@@ -224,28 +225,43 @@ async function fetchReviews() {
     const reviews = reviewIssues.map(iss => {
       const body = iss.body || '';
       let rating = 5;
-      const starMatch = body.match(/Rating:\s*([★\d]+)/i) || body.match(/(\d)\s*\/\s*5/);
+      const starMatch = body.match(/\((\d)\s*\/\s*5\)/) || body.match(/Rating:\s*([★\d]+)/i);
       if (starMatch) {
         const num = parseInt(starMatch[1], 10);
         if (!isNaN(num) && num >= 1 && num <= 5) rating = num;
       }
 
       let category = 'GTA SA & Modding';
-      const catMatch = body.match(/Category:\s*(.+)/i);
-      if (catMatch) category = catMatch[1].trim();
+      const catMatch = body.match(/\*\*Category:\*\*\s*(.+)/i);
+      if (catMatch && catMatch[1]) category = catMatch[1].trim();
+
+      let author = iss.user ? iss.user.login : 'Пользователь';
+      const authorMatch = body.match(/\*\*Author:\*\*\s*(.+)/i);
+      if (authorMatch && authorMatch[1].trim()) author = authorMatch[1].trim();
 
       let pros = '';
-      const prosMatch = body.match(/Pros:\s*(.+)/i);
-      if (prosMatch) pros = prosMatch[1].trim();
+      const prosMatch = body.match(/\*\*Pros:\*\*\s*([\s\S]*?)(?:###|_Submitted|$)/i);
+      if (prosMatch && prosMatch[1].trim()) pros = prosMatch[1].trim();
+
+      let reviewText = '';
+      const reviewMatch = body.match(/### Detailed Review:\s*([\s\S]*?)(?:---|###|_Submitted|$)/i);
+      if (reviewMatch && reviewMatch[1].trim()) {
+        reviewText = reviewMatch[1].trim();
+      } else {
+        reviewText = body.replace(/###.+/g, '').replace(/\*\*.+\*\*/g, '').replace(/---/g, '').replace(/_Submitted.+/g, '').trim();
+      }
+
+      let title = (iss.title || '').replace(/^\[REVIEW\]\s*/i, '').trim();
+      if (!title) title = 'Отзыв о SAPatcher';
 
       return {
-        author: iss.user ? iss.user.login : 'GitHub User',
+        author,
         avatar: iss.user ? iss.user.avatar_url : 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png',
         date: new Date(iss.created_at).toLocaleDateString(),
         rating,
         category,
-        title: iss.title.replace(/^\[REVIEW\]\s*/i, ''),
-        body: body.replace(/###.+/g, '').replace(/\*\*.+\*\*/g, '').trim().substring(0, 350) || 'Положительный отзыв о SAPatcher.',
+        title,
+        body: reviewText || 'Отличный опыт использования SAPatcher.',
         pros
       };
     });
