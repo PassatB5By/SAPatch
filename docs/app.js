@@ -4,6 +4,7 @@
 
 const GITHUB_REPO = 'PassatB5By/SAPatch';
 const FEEDBACK_LABEL = 'review';
+const GUEST_REVIEW_API = 'https://pixelsmith.ru/api/review.php';
 
 // --- Bilingual Dictionary ---
 const translations = {
@@ -57,6 +58,11 @@ const translations = {
     'faq.a4': 'В интерфейсе SAPatcher нажмите кнопку «Откатить лаунчер». Программа восстановит оригинальный немодифицированный app.asar из резервной копии.',
     'modal.title': 'Написать отзыв о SAPatcher',
     'modal.desc': 'Отзыв публикуется напрямую в GitHub Issues с меткой «review»',
+    'modal.tabGithub': 'С аккаунтом GitHub',
+    'modal.tabGuest': 'Без аккаунта (GitHub Access)',
+    'modal.guestNotice': 'Отзыв будет автоматически опубликован ботом через GitHub Access. Пожалуйста, укажите контакт (Email, VK или Discord) для защиты от спама.',
+    'modal.contactTypeLabel': 'Связь:',
+    'modal.contactValueLabel': 'Почта / VK / Discord *:',
     'modal.ratingLabel': 'Оценка:',
     'modal.authorLabel': 'Ваше имя или ник:',
     'modal.categoryLabel': 'Любимая функция / Клиент:',
@@ -64,7 +70,12 @@ const translations = {
     'modal.prosLabel': 'Что понравилось (Плюсы):',
     'modal.commentLabel': 'Подробный комментарий:',
     'modal.authNotice': 'Публикация происходит через GitHub с вашим профилем.',
-    'modal.btnPublish': 'Опубликовать в GitHub'
+    'modal.authNoticeGuest': 'Публикация выполняется автоматически через GitHub Access бота.',
+    'modal.btnPublish': 'Опубликовать в GitHub',
+    'modal.btnPublishGuest': 'Опубликовать через GitHub Access',
+    'modal.submitting': 'Публикация отзыва...',
+    'modal.errContact': 'Пожалуйста, укажите ваш контакт (Email, VK или Discord) для связи.',
+    'modal.successGuest': '🎉 Спасибо! Ваш отзыв успешно отправлен и опубликован через GitHub Access бота!'
   },
   en: {
     'nav.features': 'Features',
@@ -116,6 +127,11 @@ const translations = {
     'faq.a4': 'Inside SAPatcher, simply click "Restore Launcher". The program instantly restores the original unmodified app.asar from backup.',
     'modal.title': 'Write a Review for SAPatcher',
     'modal.desc': 'Your review will be submitted directly to GitHub Issues labeled as "review"',
+    'modal.tabGithub': 'With GitHub Account',
+    'modal.tabGuest': 'Without Account (GitHub Access)',
+    'modal.guestNotice': 'Your review will be automatically published by the bot via GitHub Access. Please specify your contact handle (Email, VK, or Discord) to prevent spam.',
+    'modal.contactTypeLabel': 'Contact:',
+    'modal.contactValueLabel': 'Email / VK / Discord *:',
     'modal.ratingLabel': 'Rating:',
     'modal.authorLabel': 'Your Name or Handle:',
     'modal.categoryLabel': 'Favorite Feature / Client:',
@@ -123,7 +139,12 @@ const translations = {
     'modal.prosLabel': 'What you liked (Pros):',
     'modal.commentLabel': 'Detailed Review:',
     'modal.authNotice': 'Published securely via your GitHub account.',
-    'modal.btnPublish': 'Publish on GitHub'
+    'modal.authNoticeGuest': 'Published automatically via GitHub Access bot.',
+    'modal.btnPublish': 'Publish on GitHub',
+    'modal.btnPublishGuest': 'Publish via GitHub Access',
+    'modal.submitting': 'Publishing review...',
+    'modal.errContact': 'Please provide your contact handle (Email, VK, or Discord).',
+    'modal.successGuest': '🎉 Thank you! Your review has been submitted and published via GitHub Access bot!'
   }
 };
 
@@ -254,6 +275,10 @@ async function fetchReviews() {
       let title = (iss.title || '').replace(/^\[REVIEW\]\s*/i, '').trim();
       if (!title) title = isRu ? 'Отзыв о SAPatcher' : 'Community Review';
 
+      let contact = '';
+      const contactMatch = body.match(/\*\*Contact(?:\s*\([^)]+\))?:\*\*\s*(.+)/i);
+      if (contactMatch && contactMatch[1].trim()) contact = contactMatch[1].trim().replace(/`/g, '');
+
       return {
         author,
         avatar: iss.user ? iss.user.avatar_url : 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png',
@@ -262,7 +287,8 @@ async function fetchReviews() {
         category,
         title,
         body: reviewText || 'Отличный опыт использования SAPatcher.',
-        pros
+        pros,
+        contact
       };
     });
 
@@ -298,6 +324,7 @@ function renderReviews(list) {
           <img src="${r.avatar}" alt="${r.author}" class="reviewer-avatar">
           <div class="reviewer-meta">
             <span class="reviewer-name">${r.author}</span>
+            ${r.contact ? `<span class="review-contact-badge" title="${r.contact}">✓ ${r.contact}</span>` : ''}
             <span class="review-date">${r.date}</span>
           </div>
         </div>
@@ -312,7 +339,7 @@ function renderReviews(list) {
   });
 }
 
-// --- Review Modal & GitHub Issue Submission ---
+// --- Review Modal & Review Submission (GitHub + Guest via Access) ---
 function setupReviewModal() {
   const modal = document.getElementById('reviewModal');
   const btnOpen = document.getElementById('btnOpenReviewModal');
@@ -322,8 +349,23 @@ function setupReviewModal() {
   const ratingInput = document.getElementById('reviewRatingInput');
   const form = document.getElementById('reviewForm');
 
+  const tabGithub = document.getElementById('tabModeGithub');
+  const tabGuest = document.getElementById('tabModeGuest');
+  const guestRow = document.getElementById('guestContactRow');
+  const guestNotice = document.getElementById('guestNoticeBox');
+  const authNoticeText = document.getElementById('authNoticeText');
+  const btnSubmitText = document.getElementById('btnSubmitReviewText');
+  const submitBtn = document.getElementById('btnSubmitReview');
+  const alertBox = document.getElementById('modalStatusAlert');
+
+  let currentMode = 'github'; // 'github' | 'guest'
+
   function openModal() {
     modal.classList.add('open');
+    if (alertBox) {
+      alertBox.className = 'modal-status-alert';
+      alertBox.style.display = 'none';
+    }
   }
 
   function closeModal() {
@@ -338,6 +380,33 @@ function setupReviewModal() {
     if (e.target === modal) closeModal();
   });
 
+  function setMode(mode) {
+    currentMode = mode;
+    const isRu = currentLang === 'ru';
+    const dict = translations[currentLang] || translations.ru;
+
+    if (alertBox) alertBox.style.display = 'none';
+
+    if (mode === 'github') {
+      tabGithub.classList.add('active');
+      tabGuest.classList.remove('active');
+      if (guestRow) guestRow.style.display = 'none';
+      if (guestNotice) guestNotice.style.display = 'none';
+      if (authNoticeText) authNoticeText.textContent = dict['modal.authNotice'];
+      if (btnSubmitText) btnSubmitText.textContent = dict['modal.btnPublish'];
+    } else {
+      tabGuest.classList.add('active');
+      tabGithub.classList.remove('active');
+      if (guestRow) guestRow.style.display = 'flex';
+      if (guestNotice) guestNotice.style.display = 'block';
+      if (authNoticeText) authNoticeText.textContent = dict['modal.authNoticeGuest'];
+      if (btnSubmitText) btnSubmitText.textContent = dict['modal.btnPublishGuest'];
+    }
+  }
+
+  if (tabGithub) tabGithub.addEventListener('click', () => setMode('github'));
+  if (tabGuest) tabGuest.addEventListener('click', () => setMode('guest'));
+
   // Star selector
   starBtns.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -350,37 +419,124 @@ function setupReviewModal() {
     });
   });
 
-  // Form submit -> build GitHub Issue creation link with label "отзыв"
-  form.addEventListener('submit', e => {
+  // Form submit -> GitHub Issue or Guest API via GitHub Access
+  form.addEventListener('submit', async e => {
     e.preventDefault();
 
+    const isRu = currentLang === 'ru';
+    const dict = translations[currentLang] || translations.ru;
     const rating = ratingInput.value || '5';
     const author = document.getElementById('reviewAuthor').value.trim();
     const category = document.getElementById('reviewCategory').value;
     const title = document.getElementById('reviewTitle').value.trim();
     const pros = document.getElementById('reviewPros').value.trim();
     const comment = document.getElementById('reviewBody').value.trim();
-
     const starString = '★'.repeat(parseInt(rating, 10)) + '☆'.repeat(5 - parseInt(rating, 10));
 
-    const issueBody = [
+    if (currentMode === 'github') {
+      const issueBody = [
+        `### Rating: ${starString} (${rating}/5)`,
+        `**Category:** ${category}`,
+        `**Author:** ${author}`,
+        '',
+        pros ? `**Pros:**\n${pros}\n` : '',
+        `### Detailed Review:\n${comment}`,
+        '',
+        '---',
+        '_Submitted via [SAPatcher Official Website](https://passatb5by.github.io/SAPatch/) by [PixelSmith Studio](https://pixelsmith.ru)_'
+      ].filter(Boolean).join('\n');
+
+      const issueTitle = `[REVIEW] ${title}`;
+      const issueUrl = `https://github.com/${GITHUB_REPO}/issues/new?title=${encodeURIComponent(issueTitle)}&labels=${encodeURIComponent(FEEDBACK_LABEL)}&body=${encodeURIComponent(issueBody)}`;
+
+      window.open(issueUrl, '_blank', 'noopener,noreferrer');
+      closeModal();
+      form.reset();
+      return;
+    }
+
+    // Guest Mode (Without GitHub Account)
+    const contactType = document.getElementById('reviewContactType') ? document.getElementById('reviewContactType').value : 'Email';
+    const contactValue = document.getElementById('reviewContactValue') ? document.getElementById('reviewContactValue').value.trim() : '';
+
+    if (!contactValue) {
+      if (alertBox) {
+        alertBox.className = 'modal-status-alert error';
+        alertBox.textContent = dict['modal.errContact'];
+        alertBox.style.display = 'block';
+      }
+      return;
+    }
+
+    const guestIssueBody = [
       `### Rating: ${starString} (${rating}/5)`,
       `**Category:** ${category}`,
-      `**Author:** ${author}`,
+      `**Author:** ${author} (Гость)`,
+      `**Contact (${contactType}):** \`${contactValue}\``,
       '',
       pros ? `**Pros:**\n${pros}\n` : '',
       `### Detailed Review:\n${comment}`,
       '',
       '---',
-      '_Submitted via [SAPatcher Official Website](https://passatb5by.github.io/SAPatch/) by [PixelSmith Studio](https://pixelsmith.ru)_'
+      '_Submitted via Guest Form (without GitHub account) on [SAPatcher Official Website](https://passatb5by.github.io/SAPatch/) by [PixelSmith Studio](https://pixelsmith.ru)_'
     ].filter(Boolean).join('\n');
 
-    const issueTitle = `[REVIEW] ${title}`;
-    const issueUrl = `https://github.com/${GITHUB_REPO}/issues/new?title=${encodeURIComponent(issueTitle)}&labels=${encodeURIComponent(FEEDBACK_LABEL)}&body=${encodeURIComponent(issueBody)}`;
+    const guestTitle = `[REVIEW] ${title}`;
+    const fallbackIssueUrl = `https://github.com/${GITHUB_REPO}/issues/new?title=${encodeURIComponent(guestTitle)}&labels=${encodeURIComponent(FEEDBACK_LABEL)}&body=${encodeURIComponent(guestIssueBody)}`;
 
-    window.open(issueUrl, '_blank', 'noopener,noreferrer');
-    closeModal();
-    form.reset();
+    // Submit to relay API
+    if (submitBtn) submitBtn.disabled = true;
+    if (btnSubmitText) btnSubmitText.textContent = dict['modal.submitting'];
+    if (alertBox) alertBox.style.display = 'none';
+
+    try {
+      const res = await fetch(GUEST_REVIEW_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          author,
+          rating: parseInt(rating, 10),
+          category,
+          title,
+          pros,
+          comment,
+          contactType,
+          contactValue
+        })
+      });
+
+      if (res.ok) {
+        if (alertBox) {
+          alertBox.className = 'modal-status-alert success';
+          alertBox.innerHTML = `<strong>${dict['modal.successGuest']}</strong>`;
+          alertBox.style.display = 'block';
+        }
+        setTimeout(() => {
+          closeModal();
+          form.reset();
+          setMode('github');
+          fetchReviews();
+        }, 2500);
+        return;
+      }
+      throw new Error(`HTTP ${res.status}`);
+    } catch (err) {
+      if (alertBox) {
+        alertBox.className = 'modal-status-alert info';
+        alertBox.innerHTML = `
+          <strong>💡 ${isRu ? 'GitHub Access шлюз' : 'GitHub Access Gateway'}</strong><br>
+          ${isRu ? 'Серверный шлюз pixelsmith.ru настраивается. Вы можете отправить отзыв разработчикам прямо на Email или открыть в GitHub:' : 'The server gateway is initializing. You can email your review directly to developers or submit via GitHub:'}
+          <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+            <a href="mailto:contact@pixelsmith.ru?subject=${encodeURIComponent('[SAPatcher Review] ' + title)}&body=${encodeURIComponent(guestIssueBody)}" class="btn btn-primary" style="padding: 6px 12px; font-size: 12px; text-decoration: none;">✉️ Email PixelSmith</a>
+            <a href="${fallbackIssueUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; text-decoration: none;">🐙 GitHub Issue</a>
+          </div>
+        `;
+        alertBox.style.display = 'block';
+      }
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+      if (btnSubmitText) btnSubmitText.textContent = dict['modal.btnPublishGuest'];
+    }
   });
 }
 
