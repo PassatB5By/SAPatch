@@ -201,11 +201,6 @@ public static class LauncherPatcherService
         return result;
     }
 
-    /// <summary>
-    /// <summary>
-    /// Intelligently resolves both the root launcher directory and the app version directory (e.g. app-1.2.46)
-    /// whether given the root folder, the app-* folder, or an executable file path inside either.
-    /// </summary>
     public static (string LauncherDir, string AppDir) ResolveLauncherAndAppDir(string? pathOrDir)
     {
         if (string.IsNullOrWhiteSpace(pathOrDir)) return (string.Empty, string.Empty);
@@ -220,7 +215,6 @@ public static class LauncherPatcherService
 
         string folderName = Path.GetFileName(p.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
 
-        // Case 1: p is ALREADY an app-* directory (e.g. ...\motion-launcher\app-1.2.46)
         if (folderName.StartsWith("app-", StringComparison.OrdinalIgnoreCase))
         {
             string appDir = p;
@@ -228,14 +222,12 @@ public static class LauncherPatcherService
             return (parent, appDir);
         }
 
-        // Case 2: p has a resources folder directly inside it (e.g. direct version folder or dev folder)
         if (Directory.Exists(Path.Combine(p, "resources")))
         {
             string parent = Directory.GetParent(p)?.FullName ?? p;
             return (parent, p);
         }
 
-        // Case 3: p is the parent launcher directory (e.g. ...\motion-launcher), find app-* inside
         try
         {
             var appDirs = Directory.GetDirectories(p, "app-*", SearchOption.TopDirectoryOnly);
@@ -250,14 +242,10 @@ public static class LauncherPatcherService
         return (p, string.Empty);
     }
 
-    /// <summary>
-    /// Returns launcher candidates (local project motion, adjacent motion folder, and official %LOCALAPPDATA%\motion-launcher).
-    /// </summary>
     public static List<string> GetCandidateLauncherDirs()
     {
         var dirs = new List<string>();
 
-        // 1. User install in LocalAppData (%LOCALAPPDATA%\motion-launcher or %LOCALAPPDATA%\Programs\motion-launcher) - standard on clean PCs!
         string localApp = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         string[] localCandidates = new[]
         {
@@ -272,16 +260,13 @@ public static class LauncherPatcherService
             }
         }
 
-        // 2. Program Files candidates
         string progFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
         string pfLauncher = Path.Combine(progFiles, "motion-launcher");
         if (Directory.Exists(pfLauncher) && !dirs.Contains(pfLauncher, StringComparer.OrdinalIgnoreCase)) dirs.Add(pfLauncher);
 
-        // 3. Explicit folder inside the workspace (dev environment)
         string? hardcodedProject = SettingsManager.Current.MotionLauncherPath;
         if (Directory.Exists(hardcodedProject) && !dirs.Contains(hardcodedProject, StringComparer.OrdinalIgnoreCase)) dirs.Add(hardcodedProject);
 
-        // 4. Relative motion folder next to executable or working dir
         string baseDir = AppDomain.CurrentDomain.BaseDirectory;
         string projectMotion = Path.Combine(baseDir, "motion");
         if (Directory.Exists(projectMotion) && !dirs.Contains(projectMotion, StringComparer.OrdinalIgnoreCase)) dirs.Add(projectMotion);
@@ -372,9 +357,6 @@ public static class LauncherPatcherService
         return status;
     }
 
-    /// <summary>
-    /// Pure C# native extractor for Electron .asar archives. Does not require node, npm, or any external tools.
-    /// </summary>
     public static bool ExtractAsar(string asarPath, string outputDir, out string error, List<string>? logs = null)
     {
         error = string.Empty;
@@ -389,7 +371,7 @@ public static class LauncherPatcherService
             using var fs = new FileStream(asarPath, FileMode.Open, FileAccess.Read, FileShare.Read);
             using var br = new BinaryReader(fs);
 
-            uint u1 = br.ReadUInt32(); // 4
+            uint u1 = br.ReadUInt32();
             uint headerSize = br.ReadUInt32();
             uint u3 = br.ReadUInt32();
             uint jsonSize = br.ReadUInt32();
@@ -523,7 +505,6 @@ public static class LauncherPatcherService
             string backupZip = Path.Combine(launcherDir, "Motion_Launcher_Original_Backup.zip");
             string backupDir = Path.Combine(resourcesDir, "original_backup");
 
-            // 1. Prepare resources/app: from unpacked folder (if present) OR by native extracting app.asar on clean PC!
             if (!Directory.Exists(appFolder))
             {
                 if (Directory.Exists(unpackedFolder))
@@ -558,7 +539,6 @@ public static class LauncherPatcherService
                 logs.Add($"[UNPACK] Рабочая папка resources/app уже готова.");
             }
 
-            // 2. Create pristine backup archive
             try
             {
                 Directory.CreateDirectory(backupDir);
@@ -601,7 +581,6 @@ public static class LauncherPatcherService
                 logs.Add($"[WARN] Создание бэкапа: {ex.Message}");
             }
 
-            // 3. Rename app.asar to app.asar.bak
             if (File.Exists(asarFile))
             {
                 try
@@ -616,7 +595,6 @@ public static class LauncherPatcherService
                 }
             }
 
-            // 4. Ensure package.json retains canonical 1.2.46 for server API authentication
             string packageJsonPath = Path.Combine(appFolder, "package.json");
             if (File.Exists(packageJsonPath))
             {
@@ -633,13 +611,11 @@ public static class LauncherPatcherService
                 }
             }
 
-            // 5. Patch dist/main.js
             string mainJsPath = Path.Combine(appFolder, "dist", "main.js");
             if (File.Exists(mainJsPath))
             {
                 string content = File.ReadAllText(mainJsPath, Encoding.UTF8);
 
-                // Strip existing guard if present
                 if (content.Contains(GuardHeader))
                 {
                     int startIdx = content.IndexOf(GuardHeader);
@@ -651,25 +627,21 @@ public static class LauncherPatcherService
                     }
                 }
 
-                // 5.1 Patch getVersion IPC handler to display 1.2.46-SAPatcher in the launcher window
                 content = content.Replace(
                     "f.ipcMain.handle(\"getVersion\",()=>f.app.isPackaged?f.app.getVersion():\"DEV\")",
                     "f.ipcMain.handle(\"getVersion\",()=>\"1.2.46-SAPatcher\")"
                 );
 
-                // 5.1.1 Keep server API queries strictly at canonical version 1.2.46 so news, servers, and CDN never 401 Unauthorized
                 content = content.Replace(
                     "{version:c.app.getVersion()}",
                     "{version:\"1.2.46\"}"
                 );
 
-                // 5.1.2 Safe navigation for news & servers in ApiManager.resolve so launcher never crashes if offline or loading
                 content = content.Replace(
                     "i&&(e.news=i),t&&e.servers.forEach(e=>{const i=t.find(t=>Number(t.serverId)===e.id);i&&(e.online=i.online)});",
                     "i&&e&&(e.news=i),t&&e&&Array.isArray(e.servers)&&e.servers.forEach(e=>{const i=t.find(t=>Number(t.serverId)===e.id);i&&(e.online=i.online)});"
                 );
 
-                // 5.2 Force SettingsStore: Standard Graphics Only
                 content = content.Replace(
                     "getGraphicsMode(){const e=this.store.get(\"graphicsMode\",\"standard\"),t=\"directX_high\"===e?\"directX_med\":e;return(0,h.isGraphicsMode)(t)?t:\"standard\"}",
                     "getGraphicsMode(){return\"standard\"}"
@@ -679,7 +651,6 @@ public static class LauncherPatcherService
                     "setGraphicsMode(e){this.store.set(\"graphicsMode\",\"standard\"),this.store.set(\"real_skybox\",!1)}"
                 );
 
-                // 5.3 Force SettingsStore: High Performance disabled
                 content = content.Replace(
                     "getHighPerformanceEnabled(){return this.store.get(\"high_performance_enabled\",!1)}",
                     "getHighPerformanceEnabled(){return!1}"
@@ -689,7 +660,6 @@ public static class LauncherPatcherService
                     "setHighPerformanceEnabled(e){this.store.set(\"high_performance_enabled\",!1)}"
                 );
 
-                // 5.4 Force SettingsStore: Auto Close Launcher disabled
                 content = content.Replace(
                     "getShouldClose(){return this.store.get(\"should_close\",!1)}",
                     "getShouldClose(){return!1}"
@@ -699,7 +669,6 @@ public static class LauncherPatcherService
                     "setShouldClose(e){this.store.set(\"should_close\",!1)}"
                 );
 
-                // 5.5 Prevent GraphicsManager from tampering with d3d9.dll (DXVK neutrality)
                 content = content.Replace(
                     "setDefaultGraphics(e){return this.updateEnb(e,n.MEDIUM_GRAPHICS_ENB,n.DEFAULT_GRAPHICS_ENB)}",
                     "setDefaultGraphics(e){return Promise.resolve(!0)}"
@@ -713,19 +682,16 @@ public static class LauncherPatcherService
                     "checkCurrentGraphics(e,t){return Promise.resolve(!0)}"
                 );
 
-                // 5.6 File Check Friendship: ignore d3d9.dll, dxvk.conf, .log files
                 content = content.Replace(
                     "return this.ignoredRelativePaths.has(n)||e.endsWith(\".log\")",
                     "return this.ignoredRelativePaths.has(n)||n.includes(\"d3d9.dll\")||n.includes(\"dxvk.conf\")||n.includes(\"d3d9.dis\")||n.includes(\"sapatcher\")||e.endsWith(\".log\")"
                 );
 
-                // 5.7 Remove Unknown Files Friendship: protect DXVK and config from being deleted
                 content = content.Replace(
                     "let i=!t.includes(\"d3d9.dll\")&&!t.includes(\"fastload.asi\");",
                     "let i=!t.includes(\"d3d9.dll\")&&!t.includes(\"dxvk.conf\")&&!t.includes(\"sapatcher\")&&!t.endsWith(\".log\")&&!t.includes(\"fastload.asi\");"
                 );
 
-                // Inject security guard or open-source integration at top
                 string guard = GuardScript;
                 string newContent = (!string.IsNullOrWhiteSpace(guard) ? guard + "\r\n" : "") + content;
                 File.WriteAllText(mainJsPath, newContent, new UTF8Encoding(false));
@@ -749,7 +715,6 @@ public static class LauncherPatcherService
                 return result;
             }
 
-            // 6. Patch browser UI (dist/browser/main.c7e6bda5696ee91ffd7a.js)
             string browserJsPath = Path.Combine(appFolder, "dist", "browser", "main.c7e6bda5696ee91ffd7a.js");
             if (File.Exists(browserJsPath))
             {
@@ -757,17 +722,14 @@ public static class LauncherPatcherService
                 {
                     string bContent = File.ReadAllText(browserJsPath, Encoding.UTF8);
 
-                    // 6.1 Lock graphics selection cards: reject clicks on non-standard graphics
                     const string origGraphics = "onGraphicsCardClick(t){this.highPerformanceEnabled&&\"standard\"!==t?this._toastService.push(\"error\",this.graphicsHighPerformanceError):t!==this.currentGraphicsMode?(this.expandedGraphicsCard=t,this.setGraphicsMode(t)):this.collapseGraphicsCard()}";
                     const string newGraphics = "onGraphicsCardClick(t){if(t!==\"standard\"){try{this._toastService.push(\"error\",\"Доступна только стандартная графика (SAPatcher)\");}catch(e){}return;}this.expandedGraphicsCard=\"standard\";this.setGraphicsMode(\"standard\");}";
                     bContent = bContent.Replace(origGraphics, newGraphics);
 
-                    // 6.2 Lock checkboxes: only allow wideScreenFix; block highPerformanceEnabled and shouldCloseOnJoin
                     const string origChecked = "onChecked(t){let e;switch(t){case\"shouldCloseOnJoin\":";
                     const string newChecked = "onChecked(t){if(t!==\"wideScreenFix\"){return;}let e;switch(t){case\"shouldCloseOnJoin\":";
                     bContent = bContent.Replace(origChecked, newChecked);
 
-                    // 6.3 Enforce state in syncLocalStateWithService
                     bContent = bContent.Replace(
                         "syncLocalStateWithService(){var t,e,n;if(!this._service.data)return;",
                         "syncLocalStateWithService(){var t,e,n;if(!this._service.data)return;this.shouldCloseOnJoin=false;this.highPerformanceEnabled=false;this.isRunnableAsAdmin=false;this.isdevModeToggle=false;"
@@ -782,7 +744,6 @@ public static class LauncherPatcherService
                 }
             }
 
-            // 7. Inject CSS into dist/browser/index.html to give locked options disabled styles
             string browserHtmlPath = Path.Combine(appFolder, "dist", "browser", "index.html");
             if (File.Exists(browserHtmlPath))
             {
@@ -812,13 +773,11 @@ public static class LauncherPatcherService
                 }
             }
 
-            // 8. Generate Integrity Manifest Fingerprint over all patched files
             var manifest = GenerateIntegrityManifest(appFolder, resourcesDir);
             logs.Add($"[FINGERPRINT] Сформирован цифровой отпечаток целостности ({manifest.Files.Count} файлов, SHA-256).");
             logs.Add($"[SECURITY] Защита от модификаций активна (двуязычные уведомления RU/EN без утечки белого списка).");
             logs.Add($"[GAME_PROTECT] Защита каталога игры активна: безопасный запуск даже если игра ещё не установлена.");
 
-            // 9. Create diagnostic and runtime log files
             CreateDiagnosticLogFiles(launcherDir, appDir);
             logs.Add($"[LOG] Диагностические журналы обновлены:");
             logs.Add($"  -> {Path.Combine(launcherDir, "SAPatcher_Motion.log")}");
@@ -873,7 +832,6 @@ public static class LauncherPatcherService
             string asarBak = Path.Combine(resourcesDir, "app.asar.bak");
             string backupZip = Path.Combine(launcherDir, "Motion_Launcher_Original_Backup.zip");
 
-            // 1. If clean unpacked directory exists, restore app folder completely from it
             if (Directory.Exists(unpackedFolder))
             {
                 logs.Add($"[RESTORE] Восстановление всех файлов приложения из чистой копии unpacked...");
@@ -900,7 +858,6 @@ public static class LauncherPatcherService
                 }
             }
 
-            // 2. Restore app.asar if backed up
             if (File.Exists(asarBak))
             {
                 if (File.Exists(asarFile)) File.Delete(asarFile);
@@ -908,7 +865,6 @@ public static class LauncherPatcherService
                 logs.Add($"[RESTORE] Восстановлен оригинальный пакет app.asar.");
             }
 
-            // 3. Remove integrity manifest and first launch marker
             string manifestFile = Path.Combine(resourcesDir, "integrity.manifest.json");
             if (File.Exists(manifestFile)) File.Delete(manifestFile);
             string appManifest = Path.Combine(appFolder, "integrity.manifest.json");
@@ -976,7 +932,6 @@ public static class LauncherPatcherService
         File.WriteAllText(Path.Combine(resourcesDir, "integrity.manifest.json"), json, new UTF8Encoding(false));
         File.WriteAllText(Path.Combine(appFolder, "integrity.manifest.json"), json, new UTF8Encoding(false));
 
-        // Reset first launch marker on patch
         string firstRunMarker = Path.Combine(resourcesDir, ".first_launch_done");
         if (File.Exists(firstRunMarker)) File.Delete(firstRunMarker);
 
@@ -1049,15 +1004,10 @@ Game Protection:  Game directory guarded against foreign injector executables
     [System.Runtime.InteropServices.DllImport("imagehlp.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
     private static extern uint MapFileAndCheckSumW(string filename, out uint headerSum, out uint checkSum);
 
-    /// <summary>
-    /// Reads official Motion Launcher config.json (%APPDATA%, %LOCALAPPDATA%, or alongside launcher)
-    /// to detect the game directory configured by the launcher.
-    /// </summary>
     public static string? DetectGamePathFromLauncher(string? launcherExeOrDir = null)
     {
         var candidates = new List<string>();
 
-        // 1. Check motion-launcher config.json in %APPDATA% and %LOCALAPPDATA%
         string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -1092,7 +1042,6 @@ Game Protection:  Game directory guarded against foreign injector executables
                     string raw = File.ReadAllText(cfg);
                     using var doc = System.Text.Json.JsonDocument.Parse(raw);
 
-                    // 1. Check applied_graphics_modes keys (these are exact full paths used by the launcher)
                     if (doc.RootElement.TryGetProperty("applied_graphics_modes", out var agm) && agm.ValueKind == System.Text.Json.JsonValueKind.Object)
                     {
                         foreach (var prop in agm.EnumerateObject())
@@ -1105,7 +1054,6 @@ Game Protection:  Game directory guarded against foreign injector executables
                         }
                     }
 
-                    // 2. Check "path" property
                     if (doc.RootElement.TryGetProperty("path", out var pElem))
                     {
                         string p = (pElem.GetString() ?? "").Replace('/', '\\').Trim();
@@ -1121,7 +1069,6 @@ Game Protection:  Game directory guarded against foreign injector executables
             catch {}
         }
 
-        // 2. Known common default directories
         candidates.AddRange(new[]
         {
             @"C:\games\motion\Motion Project",
@@ -1132,7 +1079,6 @@ Game Protection:  Game directory guarded against foreign injector executables
             @"E:\games\motion"
         });
 
-        // Pick candidate that contains motion.exe or samp.exe
         foreach (var c in candidates)
         {
             if (Directory.Exists(c))
@@ -1152,9 +1098,6 @@ Game Protection:  Game directory guarded against foreign injector executables
         return candidates.FirstOrDefault(Directory.Exists);
     }
 
-    /// <summary>
-    /// Resolves and normalizes any path provided by the user (whether it's an exe or directory, with or without Motion Project subfolder).
-    /// </summary>
     public static string ResolveCustomGamePath(string rawPath)
     {
         if (string.IsNullOrWhiteSpace(rawPath)) return string.Empty;
@@ -1178,7 +1121,6 @@ Game Protection:  Game directory guarded against foreign injector executables
     {
         string? gameDir = null;
 
-        // 1. Explicit preferred path passed by caller (e.g. from UI input field)
         if (!string.IsNullOrWhiteSpace(preferredPath))
         {
             string p = preferredPath.Trim().Trim('"', '\'').Replace('/', '\\');
@@ -1198,7 +1140,6 @@ Game Protection:  Game directory guarded against foreign injector executables
             }
         }
 
-        // 2. Saved path in SettingsManager (PRIORITY: if user has already configured a folder, DO NOT take from launcher!)
         if (string.IsNullOrEmpty(gameDir) && !string.IsNullOrWhiteSpace(SettingsManager.Current.MotionGamePath))
         {
             string p = SettingsManager.Current.MotionGamePath.Trim().Replace('/', '\\');
@@ -1220,7 +1161,6 @@ Game Protection:  Game directory guarded against foreign injector executables
             }
         }
 
-        // 3. Auto-detect from Motion Launcher config.json ONLY if no path is configured in SettingsManager
         if (string.IsNullOrEmpty(gameDir))
         {
             gameDir = DetectGamePathFromLauncher();
@@ -1259,7 +1199,6 @@ Game Protection:  Game directory guarded against foreign injector executables
             string normRel = rel.ToLowerInvariant();
             string lower = Path.GetFileName(file).ToLowerInvariant();
 
-            // Skip dynamic runtime caches, screenshots, crash dumps and temporary files
             if (normRel.StartsWith("cef/library/cache/") || normRel == "cef/library/cache" ||
                 normRel.StartsWith("motion/screens/") || normRel == "motion/screens" ||
                 normRel.StartsWith("screens/") || normRel == "screens" ||
@@ -1285,10 +1224,6 @@ Game Protection:  Game directory guarded against foreign injector executables
         return res;
     }
 
-    /// <summary>
-    /// Checks game folder security: whitelist of executables, DXVK d3d9.dll size verification,
-    /// LAA (4GB) status for motion.exe and samp.exe, and comparison against digital fingerprint.
-    /// </summary>
     public static GameIntegrityCheckResult CheckGameFolderIntegrity(string? preferredPath = null)
     {
         var result = new GameIntegrityCheckResult();
@@ -1305,7 +1240,6 @@ Game Protection:  Game directory guarded against foreign injector executables
         result.GamePath = gameDir;
         result.Installed = true;
 
-        // 1. Whitelist of allowed executables
         var allowedExes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "gta_sa.exe", "motion.exe", "samp.exe", "unins000.exe", "uninstall.exe", "motion_updater.exe", "crashhandler.exe"
@@ -1337,12 +1271,10 @@ Game Protection:  Game directory guarded against foreign injector executables
             result.MainExeSize = fi.Length;
         }
 
-        // 2. Check 4GB (LAA) flag on both motion.exe and samp.exe
         result.LaaMotionEnabled = CheckLaa(motionExe);
         result.LaaSampEnabled = CheckLaa(sampExe);
         result.LaaEnabled = result.LaaMotionEnabled && result.LaaSampEnabled;
 
-        // 3. Comparison of DLL weights: d3d9.dll (DXVK 32-bit)
         string d3d9File = Path.Combine(gameDir, "d3d9.dll");
         result.D3D9Exists = File.Exists(d3d9File);
         if (result.D3D9Exists)
@@ -1372,7 +1304,6 @@ Game Protection:  Game directory guarded against foreign injector executables
 
         result.DxvkConfExists = File.Exists(Path.Combine(gameDir, "dxvk.conf"));
 
-        // 4. Comparison against digital fingerprint (game.integrity.manifest.json)
         string manifestFile = Path.Combine(gameDir, "game.integrity.manifest.json");
         result.ManifestExists = File.Exists(manifestFile);
 
@@ -1464,7 +1395,6 @@ Game Protection:  Game directory guarded against foreign injector executables
             }
         }
 
-        // Anti-cheat scan for forbidden directories, scripts, and unauthorized ASIs/DLLs
         if (!ValidateGameFolderForAntiCheat(gameDir, out var acViolations) && acViolations.Count > 0)
         {
             foreach (var v in acViolations)
@@ -1534,10 +1464,10 @@ Game Protection:  Game directory guarded against foreign injector executables
 
     public static readonly HashSet<long> KnownDxvk32BitSizes = new()
     {
-        3305486, // 1.10.3
-        3858446, // 2.3
-        7786510, // 3.0
-        7856142  // 3.1.1
+        3305486,
+        3858446,
+        7786510,
+        7856142
     };
 
     public static readonly string[] ForbiddenDirs = new[]
@@ -1558,9 +1488,6 @@ Game Protection:  Game directory guarded against foreign injector executables
         "anticrasher", "wallhack"
     };
 
-    /// <summary>
-    /// Validates game directory against cheat injection vectors (CLEO, Moonloader, SAMPFUNCS, unauthorized ASIs/DLLs, etc.)
-    /// </summary>
     public static bool ValidateGameFolderForAntiCheat(string gameDir, out List<string> violations)
     {
         violations = new List<string>();
@@ -1572,12 +1499,10 @@ Game Protection:  Game directory guarded against foreign injector executables
 
         try
         {
-            // 1. Scan for forbidden directories
             var allSubDirs = Directory.GetDirectories(gameDir, "*", SearchOption.AllDirectories);
             foreach (var dir in allSubDirs)
             {
                 string relDir = Path.GetRelativePath(gameDir, dir).Replace('\\', '/').ToLowerInvariant();
-                // Explicitly ignore standard game directory data/script and dynamic CEF cache
                 if (relDir == "data/script" || relDir.StartsWith("data/script/") ||
                     relDir == "cef/library/cache" || relDir.StartsWith("cef/library/cache/"))
                 {
@@ -1595,7 +1520,6 @@ Game Protection:  Game directory guarded against foreign injector executables
                 }
             }
 
-            // 2. Scan all files in game directory
             var allFiles = GetGameFiles(gameDir);
             foreach (var rel in allFiles)
             {
@@ -1607,13 +1531,11 @@ Game Protection:  Game directory guarded against foreign injector executables
                 string ext = Path.GetExtension(fullPath).ToLowerInvariant();
                 bool isRoot = !normRel.Contains('/');
 
-                // Check forbidden extensions anywhere
                 if (ForbiddenExts.Contains(ext))
                 {
                     violations.Add($"Обнаружен запрещённый читерский скрипт/модуль: \"{rel}\"");
                 }
 
-                // Check ASI files
                 if (ext == ".asi")
                 {
                     if (!isRoot)
@@ -1626,7 +1548,6 @@ Game Protection:  Game directory guarded against foreign injector executables
                     }
                 }
 
-                // Check Root DLLs
                 if (ext == ".dll" && isRoot)
                 {
                     if (!AllowedRootDlls.Contains(fileName))
@@ -1643,7 +1564,6 @@ Game Protection:  Game directory guarded against foreign injector executables
                     }
                 }
 
-                // Check Root EXEs
                 if (ext == ".exe" && isRoot)
                 {
                     if (!AllowedRootExes.Contains(fileName))
@@ -1652,7 +1572,6 @@ Game Protection:  Game directory guarded against foreign injector executables
                     }
                 }
 
-                // Check suspicious cheat keywords
                 foreach (var kw in SuspiciousCheatKeywords)
                 {
                     if (normRel.Contains(kw))
@@ -1672,10 +1591,6 @@ Game Protection:  Game directory guarded against foreign injector executables
         return violations.Count == 0;
     }
 
-    /// <summary>
-    /// Generates or updates the game integrity fingerprint (game.integrity.manifest.json)
-    /// Strictly blocked if any cheat injection vector or unauthorized files are detected.
-    /// </summary>
     public static (bool Success, IntegrityManifest? Manifest, List<string> Violations) GenerateGameIntegrityFingerprint(string gameDir, out List<string> violations)
     {
         violations = new List<string>();
@@ -1685,7 +1600,6 @@ Game Protection:  Game directory guarded against foreign injector executables
             return (false, null, violations);
         }
 
-        // STRICT ANTI-CHEAT SCAN: Reject fingerprint creation if cheats/foreign files are detected!
         if (!ValidateGameFolderForAntiCheat(gameDir, out violations) || violations.Count > 0)
         {
             return (false, null, violations);
@@ -1734,9 +1648,6 @@ Game Protection:  Game directory guarded against foreign injector executables
         return ok ? mf : null;
     }
 
-    /// <summary>
-    /// Extracts 32-bit d3d9.dll from the project's dxvk-*.tar.gz archive.
-    /// </summary>
     public static byte[]? ExtractDxvk32BitD3D9(string version, out string archivePathFound, out string logMessage)
     {
         archivePathFound = string.Empty;
@@ -1830,10 +1741,6 @@ Game Protection:  Game directory guarded against foreign injector executables
         return null;
     }
 
-    /// <summary>
-    /// Applies IMAGE_FILE_LARGE_ADDRESS_AWARE (4GB LAA) directly into the PE header of the executable.
-    /// Creates a .Backup copy and recalculates the PE Checksum via imagehlp.dll.
-    /// </summary>
     public static bool ApplyLargeAddressAware(string exePath, out string msg)
     {
         try
@@ -1881,7 +1788,6 @@ Game Protection:  Game directory guarded against foreign injector executables
                 }
             }
 
-            // Recalculate PE Checksum (NTCORE 4gb_patch algorithm)
             try
             {
                 if (MapFileAndCheckSumW(exePath, out uint headerSum, out uint checkSum) == 0 && checkSum != 0)
@@ -1908,9 +1814,6 @@ Game Protection:  Game directory guarded against foreign injector executables
         }
     }
 
-    /// <summary>
-    /// Applies 4GB patch directly to motion.exe and samp.exe (and gta_sa.exe if present) in the game directory.
-    /// </summary>
     public static bool Apply4GbPatchToGame(string? gamePath, out List<string> logs)
     {
         logs = new List<string>();
@@ -1948,7 +1851,6 @@ Game Protection:  Game directory guarded against foreign injector executables
             return false;
         }
 
-        // Keep game.integrity.manifest.json in sync with patched executables
         try
         {
             string manifestPath = Path.Combine(resolved, "game.integrity.manifest.json");

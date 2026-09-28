@@ -4,12 +4,6 @@ using System.Reflection;
 
 namespace SAPatcher.Guard;
 
-/// <summary>
-/// Управляет выбором модуля безопасности.
-/// Если рядом с программой присутствует закрытая библиотека SAPatcher.Security.dll,
-/// загружает её и использует закрытый защитный античит-модуль.
-/// В противном случае используется открытый модуль OpenSourceGuardProvider.
-/// </summary>
 public static class GuardManager
 {
     private static IGuardProvider? _activeProvider;
@@ -64,7 +58,6 @@ public static class GuardManager
                 {
                     if (type.IsAbstract || type.IsInterface) continue;
 
-                    // Direct interface assignment
                     if (typeof(IGuardProvider).IsAssignableFrom(type))
                     {
                         var instance = Activator.CreateInstance(type) as IGuardProvider;
@@ -75,7 +68,6 @@ public static class GuardManager
                         }
                     }
 
-                    // Duck-typing fallback for assembly context separation
                     var getScriptMethod = type.GetMethod("GetGuardScript", BindingFlags.Public | BindingFlags.Instance);
                     if (getScriptMethod != null)
                     {

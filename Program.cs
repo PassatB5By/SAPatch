@@ -96,7 +96,6 @@ public class Program
                 return;
             }
 
-            // Single instance lock: prevent duplicate instances from creating lockfile conflicts and black screens
             const string SingleInstanceMutexName = "SAPatcher_SingleInstance_App_Mutex";
             bool isNewInstance = true;
             try
@@ -123,12 +122,10 @@ public class Program
                 return;
             }
 
-            // Dedicated WebView2 cache folder in LocalAppData\SAPatcher\WebView2Data
             string localApp = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             string webviewDataDir = Path.Combine(localApp, "SAPatcher", "WebView2Data");
             Directory.CreateDirectory(webviewDataDir);
 
-            // Clean up any stale lockfiles or orphaned webview processes before window initialization
             CleanupOrphanedWebViewProcesses(webviewDataDir);
 
             var window = new PhotinoWindow()
@@ -139,10 +136,8 @@ public class Program
                 .Center()
                 .SetResizable(true);
 
-            // Initialize persistent settings
             var settings = SettingsManager.Load();
 
-            // Minimize to tray on close if configured
             window.RegisterWindowClosingHandler((sender, args) =>
             {
                 if (_isExiting) return false;
@@ -154,13 +149,11 @@ public class Program
                 return false;
             });
 
-            // Start background service daemon (HTTP listener on port 49742)
             LauncherServiceDaemon.Start(msg =>
             {
                 try { window.SendWebMessage(msg); } catch {}
             });
 
-            // Initialize Windows System Tray Icon
             TrayService.Initialize(
                 onShowWindow: () =>
                 {
@@ -385,7 +378,6 @@ public class Program
                         if (root.TryGetProperty("enableFpsLimit", out var efl)) req.EnableFpsLimit = efl.GetBoolean();
                         if (root.TryGetProperty("maxFrameRate", out var mfr)) req.MaxFrameRate = mfr.GetInt32();
 
-                        // Automatically update SettingsManager
                         SettingsManager.Update(s =>
                         {
                             if (!string.IsNullOrWhiteSpace(req.GamePath)) s.MotionGamePath = req.GamePath;
@@ -602,7 +594,6 @@ public class Program
         window.Load(indexPath);
         window.WaitForClose();
 
-        // Graceful shutdown of background services
         LauncherServiceDaemon.Stop();
         TrayService.Shutdown();
     }
@@ -1673,7 +1664,6 @@ public static class MotionLauncherService
         var result = new MotionLauncherInfo();
         var searched = new List<string>();
 
-        // 1. Primary target: User configured path in Settings
         if (!string.IsNullOrEmpty(SettingsManager.Current.MotionLauncherPath))
         {
             string cfgPath = SettingsManager.Current.MotionLauncherPath;
@@ -1687,7 +1677,6 @@ public static class MotionLauncherService
 
         if (string.IsNullOrEmpty(result.Path))
         {
-            // 2. Relative motion folder in current directory or base directory
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
             string workspaceCopy = System.IO.Path.Combine(baseDir, "motion", "Motion Launcher.exe");
             searched.Add(workspaceCopy);
@@ -1697,7 +1686,6 @@ public static class MotionLauncherService
             }
             else
             {
-                // 3. User install in LocalAppData
                 string localApp = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
                 string localExe = System.IO.Path.Combine(localApp, "motion-launcher", "Motion Launcher.exe");
                 searched.Add(localExe);
@@ -1725,7 +1713,6 @@ public static class MotionLauncherService
 
         result.SearchedLocations = searched;
 
-        // Detect game path from launcher configs
         string? launcherDir = result.Found ? result.Directory : null;
         string? detectedGame = LauncherPatcherService.DetectGamePathFromLauncher(launcherDir);
         result.DiscoveredGamePath = detectedGame ?? string.Empty;
@@ -1824,7 +1811,6 @@ public static class MotionLauncherService
                 }
             }
 
-            // CRITICAL CHECK: Launcher MUST be patched before installing DXVK and 4GB Patch!
             var patchStatus = LauncherPatcherService.GetStatus(targetDir);
             if (!patchStatus.IsPatched)
             {
@@ -1838,7 +1824,6 @@ public static class MotionLauncherService
             response.Logs.Add($"[DIR] Рабочая директория Motion Launcher: {targetDir}");
             response.Logs.Add($"[DXVK] Выбрана ветка транслятора: DXVK {request.DxvkVersion} (32-бит)");
 
-            // 1. Extract 32-bit d3d9.dll from local DXVK archives in project
             byte[]? d3d9Bytes = LauncherPatcherService.ExtractDxvk32BitD3D9(request.DxvkVersion, out var archivePath, out var extractLog);
             if (d3d9Bytes == null)
             {
@@ -1850,7 +1835,6 @@ public static class MotionLauncherService
             response.Logs.Add($"[ARCHIVE] Использован пакет: {archivePath}");
             response.Logs.Add($"[DXVK_32BIT] {extractLog}");
 
-            // 2. Discover and resolve Game Directory (containing motion.exe and samp.exe)
             string? gameDir = LauncherPatcherService.ResolveGamePath(request.GamePath);
             if (string.IsNullOrEmpty(gameDir) || !Directory.Exists(gameDir))
             {
@@ -1862,12 +1846,10 @@ public static class MotionLauncherService
 
             response.Logs.Add($"[GAME_DIR] Папка игры определена: {gameDir}");
 
-            // Write 32-bit d3d9.dll directly into the game directory root (next to motion.exe and samp.exe)
             string gameD3D9 = Path.Combine(gameDir, "d3d9.dll");
             File.WriteAllBytes(gameD3D9, d3d9Bytes);
             response.Logs.Add($"[DEPLOY] 32-битная библиотека d3d9.dll установлена в корень игры рядом с motion.exe и samp.exe: {gameD3D9} ({d3d9Bytes.Length:N0} Б)");
 
-            // Also write d3d9.dll to launcher appDir for client fallback
             if (Directory.Exists(targetDir))
             {
                 try
@@ -1885,7 +1867,6 @@ public static class MotionLauncherService
                 catch {}
             }
 
-            // 3. Generate dxvk.conf based on user settings
             var confSb = new StringBuilder();
             if (request.DxvkVersion == "1.10.3")
             {
@@ -1974,13 +1955,11 @@ public static class MotionLauncherService
 
             string confContent = confSb.ToString();
 
-            // Write dxvk.conf directly into the game directory root next to d3d9.dll
             string gameConf = Path.Combine(gameDir, "dxvk.conf");
             File.WriteAllText(gameConf, confContent, new UTF8Encoding(false));
             response.DxvkConfigPath = gameConf;
             response.Logs.Add($"[CONF] dxvk.conf сформирован из настроек и создан рядом с d3d9.dll: {gameConf}");
 
-            // Write dxvk.conf to launcher directories as client fallback
             if (Directory.Exists(targetDir))
             {
                 try
@@ -2001,7 +1980,6 @@ public static class MotionLauncherService
                 catch {}
             }
 
-            // 4. Apply 4GB Patch (LAA) directly to motion.exe and samp.exe
             if (request.Enable4gbPatch)
             {
                 LauncherPatcherService.Apply4GbPatchToGame(gameDir, out var laaLogs);
@@ -2014,7 +1992,6 @@ public static class MotionLauncherService
                 response.Logs.Add("[LAA] Патч 4 ГБ ОЗУ: Пропущен по выбору пользователя (переключатель выключен)");
             }
 
-            // 5. Generate / Update Game Folder Integrity Fingerprint with anti-cheat protection
             var (ok, mf, vList) = LauncherPatcherService.GenerateGameIntegrityFingerprint(gameDir, out _);
             if (ok && mf != null)
             {
@@ -2025,8 +2002,6 @@ public static class MotionLauncherService
                 response.Logs.Add($"[SECURITY_ALERT] Создание отпечатка игры отклонено: {string.Join("; ", vList)}");
             }
 
-
-            // 5. Final Game Folder Integrity & DLL Weights Verification
             var finalCheck = LauncherPatcherService.CheckGameFolderIntegrity(gameDir);
             if (finalCheck.Installed)
             {
@@ -2164,4 +2139,3 @@ public static class MotionLauncherService
         }
     }
 }
-

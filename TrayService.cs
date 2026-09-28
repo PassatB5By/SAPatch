@@ -110,19 +110,16 @@ public static class TrayService
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.Clear(Color.Transparent);
 
-        // Glowing circle background
         using (var brush = new LinearGradientBrush(new Rectangle(0, 0, 32, 32), Color.FromArgb(0, 229, 255), Color.FromArgb(121, 40, 202), 45f))
         {
             g.FillEllipse(brush, 1, 1, 30, 30);
         }
 
-        // Inner dark circle
         using (var darkBrush = new SolidBrush(Color.FromArgb(11, 14, 23)))
         {
             g.FillEllipse(darkBrush, 3, 3, 26, 26);
         }
 
-        // "SA" emblem
         using (var font = new Font("Segoe UI", 10.5f, FontStyle.Bold, GraphicsUnit.Pixel))
         using (var textBrush = new SolidBrush(Color.FromArgb(0, 229, 255)))
         {

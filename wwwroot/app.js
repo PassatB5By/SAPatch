@@ -637,7 +637,6 @@
         window.chrome.webview.addEventListener('message', (e) => handleMessage(e.data));
       }
 
-      // Initial queries for persistent settings and patch status
       setTimeout(() => {
         try {
           const send = (obj) => {
@@ -1079,7 +1078,6 @@
         });
       });
 
-      // 1. Independent Frame Rate Limiter Controls
       const fpsLimitCb = document.getElementById('motionEnableFpsLimit');
       const limiterBody = document.getElementById('limiterBody');
       const maxFpsInput = document.getElementById('motionMaxFpsInput');
@@ -1149,7 +1147,6 @@
         });
       }
 
-      // 2. Purely HUD Overlay Controls (Totally independent from Limiter)
       const hudEnableCb = document.getElementById('motionEnableHud');
       const hudOptionsBody = document.getElementById('hudOptionsBody');
       const hudPreviewBadge = document.getElementById('hudPreviewBadge');
@@ -1271,7 +1268,6 @@
         this.logToTerminal(`[FOUND] Лаунчер обнаружен: ${data.path}`, 'success');
         this.logToTerminal(`[INFO] Версия Squirrel: ${data.version || '1.2.46'} | Размер: ${data.fileSizeFormatted || '381.5 KB'}`, 'info');
 
-        // Check and apply game path: prioritize user-configured saved path, otherwise use discovered path from launcher
         const activeGame = (data.savedGamePath && data.savedGamePath.trim())
           ? data.savedGamePath.trim()
           : (data.discoveredGamePath ? data.discoveredGamePath.trim() : '');
@@ -1307,7 +1303,6 @@
       const laaCheckbox = document.getElementById('motionEnable4gbPatch');
       const enable4gb = laaCheckbox ? laaCheckbox.checked : true;
 
-      // HUD parameters
       const hudEnableCb = document.getElementById('motionEnableHud');
       const enableHud = hudEnableCb ? hudEnableCb.checked : true;
 
@@ -1323,14 +1318,12 @@
       const hudYInput = document.getElementById('motionHudYInput');
       const hudY = hudYInput ? parseInt(hudYInput.value, 10) : 20;
 
-      // FPS Limiter
       const fpsLimitCb = document.getElementById('motionEnableFpsLimit');
       const enableFpsLimit = fpsLimitCb ? fpsLimitCb.checked : true;
 
       const maxFpsInput = document.getElementById('motionMaxFpsInput');
       const maxFrameRate = maxFpsInput ? parseInt(maxFpsInput.value, 10) : 200;
 
-      // Tweaks checkboxes
       const seamlessCb = document.getElementById('motionSeamless');
       const enableSeamless = seamlessCb ? seamlessCb.checked : true;
 
@@ -1340,7 +1333,6 @@
       const presentIntervalCb = document.getElementById('motionPresentInterval');
       const enableVsyncOff = presentIntervalCb ? presentIntervalCb.checked : true;
 
-      // STRICT GUARD: Cannot install DXVK & 4GB patch until launcher is patched!
       const isPatched = Boolean(this.patchStatus && (this.patchStatus.isPatched === true || this.patchStatus.IsPatched === true));
       if (!isPatched) {
         const isEn = I18nManager.currentLang === 'en';
@@ -1656,7 +1648,6 @@
         }
       }
 
-      // Dynamic toggle for "Install DXVK & 4GB Patch" button based on patched state
       const installBtn = document.getElementById('motionInstallBtn');
       const prereqBadge = document.getElementById('motionInstallPrereqBadge');
       if (installBtn) {

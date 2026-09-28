@@ -18,7 +18,6 @@ public class LauncherPopupWidget : Form
     private readonly int _targetX;
     private readonly int _targetY;
 
-    // Never activate or un-minimize other windows
     protected override bool ShowWithoutActivation => true;
 
     public LauncherPopupWidget(string launcherName = "Motion Launcher", string version = "v1.0.0")
@@ -27,23 +26,20 @@ public class LauncherPopupWidget : Form
         _version = version;
         _isRussian = SettingsManager.Current.Language != "en";
 
-        // Frameless, non-movable, top-most, non-activating floating widget
         FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.Manual;
         ShowInTaskbar = false;
         TopMost = true;
         DoubleBuffered = true;
-        BackColor = Color.FromArgb(11, 14, 23); // #0B0E17
+        BackColor = Color.FromArgb(11, 14, 23);
         Size = new Size(500, 168);
         Opacity = 0.0;
 
-        // Position strictly in the center of the primary display
         var workingArea = Screen.PrimaryScreen?.WorkingArea ?? new Rectangle(0, 0, 1920, 1080);
         _targetX = workingArea.Left + (workingArea.Width - Width) / 2;
         _targetY = workingArea.Top + (workingArea.Height - Height) / 2;
         Location = new Point(_targetX, _targetY + 20);
 
-        // 60 FPS smooth rendering loop
         _timer = new System.Windows.Forms.Timer { Interval = 16 };
         _timer.Tick += OnTick;
     }
@@ -53,10 +49,10 @@ public class LauncherPopupWidget : Form
         get
         {
             var cp = base.CreateParams;
-            cp.ExStyle |= 0x08000000; // WS_EX_NOACTIVATE (never steal focus or cause main window to restore)
-            cp.ExStyle |= 0x00000080; // WS_EX_TOOLWINDOW
-            cp.ExStyle |= 0x00000008; // WS_EX_TOPMOST
-            cp.ClassStyle |= 0x00020000; // CS_DROPSHADOW
+            cp.ExStyle |= 0x08000000;
+            cp.ExStyle |= 0x00000080;
+            cp.ExStyle |= 0x00000008;
+            cp.ClassStyle |= 0x00020000;
             return cp;
         }
     }
@@ -79,7 +75,6 @@ public class LauncherPopupWidget : Form
             return;
         }
 
-        // Entrance Animation: Smooth Fade-In & Slide-Up into Center (0 to 350ms)
         if (_elapsedMs < 350)
         {
             float t = _elapsedMs / 350f;
@@ -88,13 +83,11 @@ public class LauncherPopupWidget : Form
             int curY = (int)(_targetY + (1f - ease) * 18);
             Location = new Point(_targetX, curY);
         }
-        // Active Center Phase (350ms to 4650ms)
         else if (_elapsedMs < 4650)
         {
             Opacity = 1.0;
             Location = new Point(_targetX, _targetY);
         }
-        // Exit Animation: Smooth Fade-Out & Lift (4650ms to 5000ms)
         else
         {
             float tRemaining = (_totalDurationMs - _elapsedMs) / 350f;
@@ -117,14 +110,12 @@ public class LauncherPopupWidget : Form
         int h = ClientSize.Height;
         var bounds = new Rectangle(0, 0, w - 1, h - 1);
 
-        // Dynamic glowing background with animated radial pulse
         float pulse = (float)(0.5 + 0.5 * Math.Sin(_elapsedMs / 220.0));
         using (var bgBrush = new LinearGradientBrush(bounds, Color.FromArgb(14, 18, 30), Color.FromArgb(8, 10, 18), 65f))
         {
             FillRoundedRectangle(g, bgBrush, bounds, 14);
         }
 
-        // Animated circulating gradient neon border (Cyan to Electric Purple)
         float borderAngle = (float)((_elapsedMs / 18.0) % 360);
         using (var borderBrush = new LinearGradientBrush(bounds, Color.FromArgb(0, 229, 255), Color.FromArgb(121, 40, 202), borderAngle))
         using (var borderPen = new Pen(borderBrush, 2.0f))
@@ -132,16 +123,13 @@ public class LauncherPopupWidget : Form
             DrawRoundedRectangle(g, borderPen, bounds, 14);
         }
 
-        // Subtle ambient inner glow line at the top
         using (var topGlowPen = new Pen(Color.FromArgb((int)(40 + 30 * pulse), 0, 229, 255), 1.2f))
         {
             g.DrawLine(topGlowPen, 30, 2, w - 30, 2);
         }
 
-        // Top Header Row: Pulsing status beacon & badge
         int topY = 18;
 
-        // Animated Radar Beacon Ring around the pulse dot
         int beaconAlpha = (int)(180 * (1f - pulse));
         int beaconRadius = 8 + (int)(12 * pulse);
         using (var radarPen = new Pen(Color.FromArgb(beaconAlpha, 0, 229, 255), 1.5f))
@@ -161,7 +149,6 @@ public class LauncherPopupWidget : Form
             g.DrawString(headerText, headerFont, headerBrush, 38, topY - 1);
         }
 
-        // Version badge on top right
         string versionBadge = _version;
         using (var badgeFont = new Font("Consolas", 8.5f, FontStyle.Regular))
         using (var badgeBg = new SolidBrush(Color.FromArgb(20, 26, 42)))
@@ -175,7 +162,6 @@ public class LauncherPopupWidget : Form
             g.DrawString(versionBadge, badgeFont, badgeText, badgeRect, sf);
         }
 
-        // Main Title (Bold, modern typography)
         string titleText = _isRussian
             ? $"{_launcherName} пропатчен SAPatcher"
             : $"{_launcherName} Patched & Optimized";
@@ -185,7 +171,6 @@ public class LauncherPopupWidget : Form
             g.DrawString(titleText, titleFont, titleBrush, 24, topY + 26);
         }
 
-        // Subtitle / Features
         string subText = _isRussian
             ? "Фоновая служба подтвердила запуск • DXVK Vulkan • 4GB ОЗУ"
             : "Authorized by SAPatcher service • DXVK Vulkan • 4GB RAM";
@@ -195,17 +180,15 @@ public class LauncherPopupWidget : Form
             g.DrawString(subText, subFont, subBrush, 24, topY + 54);
         }
 
-        // Diagnostics info
         string diagText = _isRussian
             ? "Диагностика и лог: SAPatcher_Motion.log создан рядом с exe"
             : "Diagnostics & launch log: SAPatcher_Motion.log created next to exe";
         using (var diagFont = new Font("Segoe UI", 8.5f, FontStyle.Regular))
-        using (var diagBrush = new SolidBrush(Color.FromArgb(0, 255, 178))) // Neon mint
+        using (var diagBrush = new SolidBrush(Color.FromArgb(0, 255, 178)))
         {
             g.DrawString(diagText, diagFont, diagBrush, 24, topY + 77);
         }
 
-        // Bottom Countdown Bar Track & Animated Fill
         int barY = h - 22;
         int barX = 24;
         int barW = w - 48;
@@ -231,7 +214,6 @@ public class LauncherPopupWidget : Form
             }
         }
 
-        // Remaining Time Label
         double remainingSec = Math.Max(0, (_totalDurationMs - _elapsedMs) / 1000.0);
         string countText = _isRussian
             ? $"Закрытие через {remainingSec:0.0} с"
@@ -262,15 +244,11 @@ public class LauncherPopupWidget : Form
         int diameter = radius * 2;
         var arc = new Rectangle(bounds.Location, new Size(diameter, diameter));
 
-        // Top left
         path.AddArc(arc, 180, 90);
-        // Top right
         arc.X = bounds.Right - diameter;
         path.AddArc(arc, 270, 90);
-        // Bottom right
         arc.Y = bounds.Bottom - diameter;
         path.AddArc(arc, 0, 90);
-        // Bottom left
         arc.X = bounds.Left;
         path.AddArc(arc, 90, 90);
         path.CloseFigure();
@@ -279,7 +257,6 @@ public class LauncherPopupWidget : Form
 
     public static void ShowPopup(string launcherName = "Motion Launcher", string version = "v1.0.0")
     {
-        // Spawns smoothly on a dedicated background STA thread without activating or stealing focus
         var thread = new Thread(() =>
         {
             try

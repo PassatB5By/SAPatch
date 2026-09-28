@@ -122,7 +122,6 @@ public static class LauncherServiceDaemon
                 string gameLogDesc = isGameInstalled ? $"GamePath: {gamePath} (Protected)" : "Game: Not Installed Yet (Standby Mode)";
                 Console.WriteLine($"[SAPatcher Daemon] Launcher started: {launcher} (PID: {pid}), {gameLogDesc}, FirstRun: {isFirstRun}");
 
-                // Save game path to settings if installed, but DO NOT overwrite user's configured path if already set!
                 if (isGameInstalled && !string.IsNullOrWhiteSpace(gamePath))
                 {
                     if (string.IsNullOrWhiteSpace(SettingsManager.Current.MotionGamePath))
@@ -142,13 +141,11 @@ public static class LauncherServiceDaemon
                     }
                 }
 
-                // If not first-run restart, display the 5-second centered popup widget
                 if (!isFirstRun)
                 {
                     LauncherPopupWidget.ShowPopup(launcher, "1.2.46-SAPatcher");
                 }
 
-                // Append event to launcher logs if folder exists
                 try
                 {
                     string? motionDir = SettingsManager.Current.MotionLauncherPath;
@@ -170,7 +167,6 @@ public static class LauncherServiceDaemon
                 }
                 catch {}
 
-                // Notify UI via callback
                 try
                 {
                     var notifyPayload = new
