@@ -373,7 +373,29 @@
         <button type="button" id="btnCloseReviewModal" class="btn-close">&times;</button>
       </div>
 
+      <!-- Mode Selector -->
+      <div class="review-mode-selector">
+        <button type="button" class="mode-tab active" data-mode="github" id="tabModeGithub">
+          <svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+          <span data-i18n="modal.tabGithub">С аккаунтом GitHub</span>
+        </button>
+        <button type="button" class="mode-tab" data-mode="guest" id="tabModeGuest">
+          <svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          <span data-i18n="modal.tabGuest">Без аккаунта (GitHub Access)</span>
+        </button>
+      </div>
+
       <form id="reviewForm" class="review-form">
+        <!-- Guest Notice Box -->
+        <div id="guestNoticeBox" class="guest-notice-box" style="display: none;">
+          <span data-i18n="modal.guestNotice">Отзыв будет автоматически опубликован ботом через GitHub Access. Пожалуйста, укажите контакт (Email, VK или Discord) для защиты от спама.</span>
+        </div>
+
         <!-- Rating Stars -->
         <div class="form-group">
           <label class="form-label" data-i18n="modal.ratingLabel">Оценка:</label>
@@ -406,6 +428,22 @@
           </div>
         </div>
 
+        <!-- Guest Contact Row (Hidden by default for GitHub mode) -->
+        <div class="form-row guest-only-field" id="guestContactRow" style="display: none;">
+          <div class="form-group" style="width: 140px;">
+            <label class="form-label" for="reviewContactType" data-i18n="modal.contactTypeLabel">Связь:</label>
+            <select id="reviewContactType" class="form-input">
+              <option value="Email">Email</option>
+              <option value="VK">ВКонтакте (VK)</option>
+              <option value="Discord">Discord</option>
+            </select>
+          </div>
+          <div class="form-group flex-1">
+            <label class="form-label" for="reviewContactValue" data-i18n="modal.contactValueLabel">Почта / VK / Discord *:</label>
+            <input type="text" id="reviewContactValue" class="form-input" placeholder="e.g. alex@mail.ru или vk.com/id..." data-i18n-placeholder="modal.contactPlaceholder">
+          </div>
+        </div>
+
         <div class="form-group">
           <label class="form-label" for="reviewTitle" data-i18n="modal.summaryLabel">Краткий заголовок:</label>
           <input type="text" id="reviewTitle" class="form-input" placeholder="e.g. Плавный FPS и исчезли вылеты памяти!" required>
@@ -421,17 +459,20 @@
           <textarea id="reviewBody" rows="4" class="form-input form-textarea" placeholder="Расскажите о вашем игровом опыте, стабильности, FPS до и после патча..." required></textarea>
         </div>
 
+        <!-- Status Alert Box -->
+        <div id="modalStatusAlert" class="modal-status-alert"></div>
+
         <!-- Submission Options -->
         <div class="modal-footer">
-          <div class="auth-notice">
-            <span class="auth-icon">ℹ️</span>
-            <span data-i18n="modal.authNotice">Публикация происходит через GitHub с вашим профилем.</span>
+          <div class="auth-notice" id="authNoticeBox">
+            <span class="auth-icon" id="authNoticeIcon">ℹ️</span>
+            <span id="authNoticeText" data-i18n="modal.authNotice">Публикация происходит через GitHub с вашим профилем.</span>
           </div>
-          <button type="submit" class="btn btn-primary btn-submit-review">
-            <svg class="icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+          <button type="submit" id="btnSubmitReview" class="btn btn-primary btn-submit-review">
+            <svg id="submitBtnIcon" class="icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
               <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
             </svg>
-            <span data-i18n="modal.btnPublish">Опубликовать в GitHub</span>
+            <span id="btnSubmitReviewText" data-i18n="modal.btnPublish">Опубликовать в GitHub</span>
           </button>
         </div>
       </form>
