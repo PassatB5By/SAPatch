@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SAPatcher — Next-Gen Motion Project Optimizer & DXVK Engine</title>
-  <meta name="description" content="Official website for SAPatcher. High-performance DXVK Vulkan renderer, 4GB LAA memory unlocker, and seamless launcher integration for Motion Project.">
-  <meta name="keywords" content="SAPatcher, Motion Project, DXVK, Vulkan, GTA SA, SAMP, 4GB Patch, LAA, FPS Boost, Optimizer">
+  <title>SAPatcher — Универсальный оптимизатор GTA SA, SA-MP, CRMP & Motion</title>
+  <meta name="description" content="Официальный сайт SAPatcher от PixelSmith Studio. Низкоуровневый рендерер DXVK Vulkan, патч 4GB LAA для GTA SA, SA-MP, CRMP и бесшовная интеграция с Motion Launcher.">
+  <meta name="keywords" content="SAPatcher, PixelSmith Studio, GTA SA, SAMP, CRMP, Motion Project, DXVK, Vulkan, 4GB Patch, LAA, Оптимизация GTA, ФПС">
   <meta name="theme-color" content="#090c10">
 
-  <!-- Open Graph / Social Media -->
+  <!-- Open Graph -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="SAPatcher — Next-Gen Motion Project Optimizer">
-  <meta property="og:description" content="Boost FPS, eliminate memory crashes with 4GB LAA, and unlock DXVK Vulkan in Motion Project.">
+  <meta property="og:title" content="SAPatcher — PixelSmith Studio">
+  <meta property="og:description" content="Универсальный Vulkan & 4GB LAA оптимизатор для GTA SA, SA-MP, CRMP и Motion Project.">
   <meta property="og:url" content="https://passatb5by.github.io/SAPatch/">
 
   <!-- Fonts -->
@@ -33,7 +33,7 @@
   <!-- Header / Navigation -->
   <header class="navbar">
     <div class="container nav-container">
-      <div class="logo-group">
+      <a href="https://pixelsmith.ru" target="_blank" rel="noopener noreferrer" class="logo-group">
         <div class="logo-icon">
           <span>SA</span>
         </div>
@@ -41,13 +41,14 @@
           <span class="logo-title">SAPatcher</span>
           <span class="logo-badge" id="navVersionBadge">v1.0.0</span>
         </div>
-      </div>
+      </a>
 
       <nav class="nav-links">
         <a href="#features" data-i18n="nav.features">Возможности</a>
         <a href="#specs" data-i18n="nav.specs">Совместимость</a>
         <a href="#reviews" data-i18n="nav.reviews">Отзывы</a>
         <a href="#faq" data-i18n="nav.faq">FAQ</a>
+        <a href="https://pixelsmith.ru" target="_blank" rel="noopener noreferrer" class="nav-studio-link">PixelSmith.ru</a>
       </nav>
 
       <div class="nav-actions">
@@ -72,28 +73,28 @@
     <div class="container hero-container">
       <div class="hero-badge">
         <span class="status-dot"></span>
-        <span data-i18n="hero.badge">Официальный релиз оптимизатора Motion Project</span>
+        <span data-i18n="hero.badge">Проект от PixelSmith Studio</span>
       </div>
 
       <h1 class="hero-title">
         <span class="gradient-text" data-i18n="hero.titleGradient">SAPatcher</span>
-        <span class="title-sub" data-i18n="hero.titleSub">Максимальный FPS и стабильность для Motion</span>
+        <span class="title-sub" data-i18n="hero.titleSub">Универсальный оптимизатор GTA SA, SA-MP, CRMP & Motion</span>
       </h1>
 
       <p class="hero-desc" data-i18n="hero.description">
-        Универсальный инструмент тонкой настройки и модернизации: трансляция графики Direct3D 9 в Vulkan (DXVK), снятие лимита 2GB памяти (4GB LAA Patch), устранение вылетов Out Of Memory и аппаратная диагностика ПК.
+        Комплексная модернизация движка GTA San Andreas и многопользовательских клиентов: трансляция графики в Vulkan API (DXVK), расширение виртуальной памяти до 4 ГБ (LAA), защита от вылетов Out of Memory и бесшовная адаптация лаунчера Motion Project.
       </p>
 
       <div class="hero-buttons">
-        <a id="btnDownloadLatest" href="https://github.com/PassatB5By/SAPatch/releases/latest" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-glow">
+        <a id="btnDownloadLatest" href="https://github.com/PassatB5By/SAPatch/releases" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-glow">
           <svg class="icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <polyline points="7 10 12 15 17 10"></polyline>
             <line x1="12" y1="15" x2="12" y2="3"></line>
           </svg>
           <div class="btn-text-group">
-            <span class="btn-title" data-i18n="hero.btnDownload">Скачать SAPatcher</span>
-            <span class="btn-subtitle" id="releaseInfoText" data-i18n="hero.btnSub">GitHub Release • Windows x64</span>
+            <span class="btn-title" id="btnDownloadTitle" data-i18n="hero.btnDownload">Скачать SAPatcher</span>
+            <span class="btn-subtitle" id="releaseInfoText">v1.0.0 • Windows x64</span>
           </div>
         </a>
 
@@ -109,11 +110,11 @@
       <div class="metrics-grid">
         <div class="metric-card">
           <div class="metric-value">+40-120%</div>
-          <div class="metric-label" data-i18n="hero.metricFps">Прирост стабильности FPS</div>
+          <div class="metric-label" data-i18n="hero.metricFps">Стабильность и фреймрейт</div>
         </div>
         <div class="metric-card">
-          <div class="metric-value">4 GB</div>
-          <div class="metric-label" data-i18n="hero.metricRam">LAA Адресация памяти</div>
+          <div class="metric-value">4 GB LAA</div>
+          <div class="metric-label" data-i18n="hero.metricRam">GTA SA, SA-MP, CRMP</div>
         </div>
         <div class="metric-card">
           <div class="metric-value">0 Crashes</div>
@@ -121,7 +122,7 @@
         </div>
         <div class="metric-card">
           <div class="metric-value">1 Click</div>
-          <div class="metric-label" data-i18n="hero.metricInstall">Авто-установка и фикс API</div>
+          <div class="metric-label" data-i18n="hero.metricInstall">Авто-патч и адаптация</div>
         </div>
       </div>
     </div>
@@ -131,8 +132,8 @@
   <section id="features" class="section">
     <div class="container">
       <div class="section-header">
-        <h2 class="section-title gradient-text" data-i18n="features.title">Ключевые технологии</h2>
-        <p class="section-subtitle" data-i18n="features.subtitle">Архитектура глубокой интеграции для идеального игрового опыта</p>
+        <h2 class="section-title gradient-text" data-i18n="features.title">Ключевые возможности</h2>
+        <p class="section-subtitle" data-i18n="features.subtitle">Универсальные решения для всей экосистемы GTA San Andreas и современных лаунчеров</p>
       </div>
 
       <div class="features-grid">
@@ -145,7 +146,7 @@
           </div>
           <h3 class="feature-title" data-i18n="features.dxvk.title">DXVK Vulkan Революция</h3>
           <p class="feature-desc" data-i18n="features.dxvk.desc">
-            Трансляция устаревших инструкций Direct3D 9 в современный низкоуровневый Vulkan API. Избавляет от микрофризов, разрывов кадров и равномерно распределяет нагрузку на GPU.
+            Трансляция устаревших инструкций Direct3D 9 в современный низкоуровневый Vulkan API. Избавляет от микрофризов, разрывов кадров и равномерно распределяет нагрузку на GPU в GTA SA, SA-MP и CRMP.
           </p>
           <div class="feature-tags">
             <span class="tag">v1.10.3</span>
@@ -167,11 +168,12 @@
           </div>
           <h3 class="feature-title" data-i18n="features.laa.title">Патч 4 ГБ памяти (LAA)</h3>
           <p class="feature-desc" data-i18n="features.laa.desc">
-            Снимает стандартный лимит 2048 МБ 32-битного движка GTA SA. Игра получает доступ к полным 4 ГБ виртуального адресного пространства для текстур, скинов и кастомного транспорта.
+            Снимает стандартный лимит 2048 МБ 32-битного движка GTA SA. Игра получает доступ к полным 4 ГБ виртуального адресного пространства для HD-текстур, кастомного транспорта и ресурсоёмких модификаций.
           </p>
           <div class="feature-tags">
             <span class="tag">motion.exe</span>
             <span class="tag">samp.exe</span>
+            <span class="tag">gta_sa.exe</span>
             <span class="tag tag-accent">Anti-Crash</span>
           </div>
         </div>
@@ -183,14 +185,14 @@
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
             </svg>
           </div>
-          <h3 class="feature-title" data-i18n="features.guard.title">Launcher Integration & Daemon</h3>
+          <h3 class="feature-title" data-i18n="features.guard.title">Первая адаптация: Motion Project</h3>
           <p class="feature-desc" data-i18n="features.guard.desc">
-            Фоновая служба следит за авторизацией процесса, предотвращает авто-сброс модификаций встроенным загрузчиком и синхронизирует сетевое API без ошибок 401 Unauthorized.
+            Motion стал первым лаунчером с бесшовной поддержкой «из коробки»: автоматический обход сброса файлов при обновлениях, синхронизация сетевого API и фоновая служба в трее.
           </p>
           <div class="feature-tags">
             <span class="tag">Daemon Port 49742</span>
             <span class="tag">Tray Icon</span>
-            <span class="tag">Auto-Reconnect</span>
+            <span class="tag tag-accent">Motion Ready</span>
           </div>
         </div>
 
@@ -224,7 +226,7 @@
     <div class="container">
       <div class="section-header">
         <h2 class="section-title gradient-text" data-i18n="specs.title">Системные требования и рекомендации</h2>
-        <p class="section-subtitle" data-i18n="specs.subtitle">Выберите оптимальную версию DXVK для вашей видеокарты</p>
+        <p class="section-subtitle" data-i18n="specs.subtitle">Подберите оптимальную версию DXVK для вашей видеокарты</p>
       </div>
 
       <div class="specs-grid">
@@ -255,8 +257,8 @@
       <div class="section-header">
         <div class="review-header-flex">
           <div>
-            <h2 class="section-title gradient-text" data-i18n="reviews.title">Отзывы пользователей</h2>
-            <p class="section-subtitle" data-i18n="reviews.subtitle">Реальные отзывы игроков Motion Project, загружаемые напрямую из GitHub</p>
+            <h2 class="section-title gradient-text" data-i18n="reviews.title">Реальные отзывы игроков</h2>
+            <p class="section-subtitle" data-i18n="reviews.subtitle">Публикуются напрямую в GitHub Issues с меткой «отзыв»</p>
           </div>
           <button type="button" id="btnOpenReviewModal" class="btn btn-primary">
             <svg class="icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -280,7 +282,7 @@
       <div class="reviews-cta-card">
         <div class="reviews-cta-content">
           <h3 data-i18n="reviews.ctaTitle">Играете с SAPatcher? Поделитесь впечатлениями!</h3>
-          <p data-i18n="reviews.ctaSubtitle">Ваш отзыв публикуется в официальном репозитории с меткой <code>feedback</code> и помогает развивать проект.</p>
+          <p data-i18n="reviews.ctaSubtitle">Ваш отзыв публикуется в официальном репозитории с меткой <code>отзыв</code> и помогает развивать проект.</p>
         </div>
         <button type="button" class="btn btn-primary btnOpenReviewModalTrigger" data-i18n="reviews.ctaBtn">Оставить отзыв</button>
       </div>
@@ -297,31 +299,41 @@
       <div class="faq-accordion">
         <div class="faq-item">
           <button class="faq-question">
-            <span data-i18n="faq.q1">Банят ли за использование SAPatcher?</span>
+            <span data-i18n="faq.q1">Работает ли SAPatcher с обычной GTA SA, SA-MP и CRMP?</span>
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer">
-            <p data-i18n="faq.a1">Нет. SAPatcher — это графический оптимизатор и расширитель памяти. Он не содержит читов, инжекторов стороннего кода или запрещённых модификаций, сохраняя 100% совместимость с античитом Motion Project.</p>
+            <p data-i18n="faq.a1">Да! SAPatcher разработан как универсальное решение для GTA San Andreas, клиентов SA-MP и CRMP. Он снимает лимит памяти 4GB LAA и внедряет Vulkan-транслятор DXVK в любую сборку. Motion Project — это первый лаунчер, для которого реализована полная бесшовная интеграция.</p>
           </div>
         </div>
 
         <div class="faq-item">
           <button class="faq-question">
-            <span data-i18n="faq.q2">Что делать, если при запуске чёрный экран или вылет?</span>
+            <span data-i18n="faq.q2">Банят ли за использование SAPatcher?</span>
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer">
-            <p data-i18n="faq.a2">Попробуйте переключить версию DXVK в SAPatcher на более раннюю (например, 2.3 или 1.10.3), либо обновите видеодрайвер. Также используйте встроенную кнопку «Генерация отчёта диагностики» для выявления несовместимостей.</p>
+            <p data-i18n="faq.a2">Нет. SAPatcher является графическим оптимизатором и расширителем памяти. Он не содержит читов, инжекторов стороннего кода или запрещённых модификаций, сохраняя 100% совместимость с античитами серверов.</p>
           </div>
         </div>
 
         <div class="faq-item">
           <button class="faq-question">
-            <span data-i18n="faq.q3">Как вернуть оригинальный лаунчер без изменений?</span>
+            <span data-i18n="faq.q3">Что делать, если при запуске чёрный экран или вылет?</span>
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer">
-            <p data-i18n="faq.a3">В интерфейсе SAPatcher нажмите кнопку «Откатить лаунчер». Программа восстановит оригинальный немодифицированный app.asar из резервной копии.</p>
+            <p data-i18n="faq.a3">Попробуйте переключить версию DXVK в SAPatcher на более раннюю (например, 2.3 или 1.10.3), либо обновите видеодрайвер. Также используйте встроенную кнопку «Генерация отчёта диагностики» для выявления несовместимостей.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            <span data-i18n="faq.q4">Как вернуть оригинальный лаунчер без изменений?</span>
+            <span class="faq-icon">+</span>
+          </button>
+          <div class="faq-answer">
+            <p data-i18n="faq.a4">В интерфейсе SAPatcher нажмите кнопку «Откатить лаунчер». Программа восстановит оригинальный немодифицированный app.asar из резервной копии.</p>
           </div>
         </div>
       </div>
@@ -337,11 +349,12 @@
           <span class="logo-title">SAPatcher</span>
         </div>
         <p class="footer-copy">
-          © 2026 SAPatcher Team. Open Source Core under MIT License.
+          Разработано <a href="https://pixelsmith.ru" target="_blank" rel="noopener noreferrer" class="studio-link">PixelSmith Studio</a>. Основной сайт: <a href="https://pixelsmith.ru" target="_blank" rel="noopener noreferrer" class="studio-link">pixelsmith.ru</a>.
         </p>
       </div>
 
       <div class="footer-links">
+        <a href="https://pixelsmith.ru" target="_blank" rel="noopener noreferrer">PixelSmith.ru</a>
         <a href="https://github.com/PassatB5By/SAPatch" target="_blank" rel="noopener noreferrer">GitHub Repo</a>
         <a href="https://github.com/PassatB5By/SAPatch/releases" target="_blank" rel="noopener noreferrer">Releases</a>
         <a href="https://github.com/PassatB5By/SAPatch/issues" target="_blank" rel="noopener noreferrer">Issues & Feedback</a>
@@ -355,7 +368,7 @@
       <div class="modal-header">
         <div class="modal-title-group">
           <h3 class="modal-title" data-i18n="modal.title">Написать отзыв о SAPatcher</h3>
-          <p class="modal-desc" data-i18n="modal.desc">Отзыв будет опубликован в GitHub Issues с меткой «feedback»</p>
+          <p class="modal-desc" data-i18n="modal.desc">Отзыв публикуется напрямую в GitHub Issues с меткой «отзыв»</p>
         </div>
         <button type="button" id="btnCloseReviewModal" class="btn-close">&times;</button>
       </div>
@@ -381,12 +394,13 @@
           </div>
 
           <div class="form-group flex-1">
-            <label class="form-label" for="reviewCategory" data-i18n="modal.categoryLabel">Любимая функция:</label>
+            <label class="form-label" for="reviewCategory" data-i18n="modal.categoryLabel">Любимая функция / Клиент:</label>
             <select id="reviewCategory" class="form-input">
+              <option value="GTA SA & SA-MP">GTA San Andreas & SA-MP</option>
+              <option value="CRMP & Radmir">CRMP & Radmir</option>
+              <option value="Motion Project">Motion Project Launcher</option>
               <option value="DXVK Vulkan FPS Boost">DXVK Vulkan (FPS Boost)</option>
               <option value="4GB RAM Memory Patch">4GB RAM Patch (No Crashes)</option>
-              <option value="Launcher Integration">Launcher Integration & Daemon</option>
-              <option value="Diagnostics & Reports">Diagnostics & Reports</option>
               <option value="General Overall">Overall Experience</option>
             </select>
           </div>
@@ -394,7 +408,7 @@
 
         <div class="form-group">
           <label class="form-label" for="reviewTitle" data-i18n="modal.summaryLabel">Краткий заголовок:</label>
-          <input type="text" id="reviewTitle" class="form-input" placeholder="e.g. Плавный FPS и исчезли фризы на сервере!" required>
+          <input type="text" id="reviewTitle" class="form-input" placeholder="e.g. Плавный FPS и исчезли вылеты памяти!" required>
         </div>
 
         <div class="form-group">

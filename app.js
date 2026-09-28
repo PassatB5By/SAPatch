@@ -1,9 +1,9 @@
 // ============================================================
-// SAPatcher Official GitHub Pages Website Application
+// SAPatcher Official Website by PixelSmith Studio (pixelsmith.ru)
 // ============================================================
 
 const GITHUB_REPO = 'PassatB5By/SAPatch';
-const FEEDBACK_LABEL = 'feedback';
+const FEEDBACK_LABEL = 'отзыв';
 
 // --- Bilingual Dictionary ---
 const translations = {
@@ -12,51 +12,54 @@ const translations = {
     'nav.specs': 'Совместимость',
     'nav.reviews': 'Отзывы',
     'nav.faq': 'FAQ',
-    'hero.badge': 'Официальный релиз оптимизатора Motion Project',
+    'hero.badge': 'Проект от PixelSmith Studio',
     'hero.titleGradient': 'SAPatcher',
-    'hero.titleSub': 'Максимальный FPS и стабильность для Motion',
-    'hero.description': 'Универсальный инструмент тонкой настройки и модернизации: трансляция графики Direct3D 9 в Vulkan (DXVK), снятие лимита 2GB памяти (4GB LAA Patch), устранение вылетов Out Of Memory и аппаратная диагностика ПК.',
+    'hero.titleSub': 'Универсальный оптимизатор GTA SA, SA-MP, CRMP & Motion',
+    'hero.description': 'Комплексная модернизация движка GTA San Andreas и многопользовательских клиентов: трансляция графики в Vulkan API (DXVK), расширение виртуальной памяти до 4 ГБ (LAA), защита от вылетов Out of Memory и бесшовная адаптация лаунчера Motion Project.',
     'hero.btnDownload': 'Скачать SAPatcher',
-    'hero.btnSub': 'GitHub Release • Windows x64',
     'hero.btnReviews': 'Отзывы сообщества',
-    'hero.metricFps': 'Прирост стабильности FPS',
-    'hero.metricRam': 'LAA Адресация памяти',
+    'hero.metricFps': 'Стабильность и фреймрейт',
+    'hero.metricRam': 'GTA SA, SA-MP, CRMP',
     'hero.metricCrash': 'Защита от Out Of Memory',
-    'hero.metricInstall': 'Авто-установка и фикс API',
-    'features.title': 'Ключевые технологии',
-    'features.subtitle': 'Архитектура глубокой интеграции для идеального игрового опыта',
+    'hero.metricInstall': 'Авто-патч и адаптация',
+    'features.title': 'Ключевые возможности',
+    'features.subtitle': 'Универсальные решения для всей экосистемы GTA San Andreas и современных лаунчеров',
     'features.dxvk.title': 'DXVK Vulkan Революция',
-    'features.dxvk.desc': 'Трансляция устаревших инструкций Direct3D 9 в современный низкоуровневый Vulkan API. Избавляет от микрофризов, разрывов кадров и равномерно распределяет нагрузку на GPU.',
+    'features.dxvk.desc': 'Трансляция устаревших инструкций Direct3D 9 в современный низкоуровневый Vulkan API. Избавляет от микрофризов, разрывов кадров и равномерно распределяет нагрузку на GPU в GTA SA, SA-MP и CRMP.',
     'features.laa.title': 'Патч 4 ГБ памяти (LAA)',
-    'features.laa.desc': 'Снимает стандартный лимит 2048 МБ 32-битного движка GTA SA. Игра получает доступ к полным 4 ГБ виртуального адресного пространства для текстур, скинов и кастомного транспорта.',
-    'features.guard.title': 'Launcher Integration & Daemon',
-    'features.guard.desc': 'Фоновая служба следит за авторизацией процесса, предотвращает авто-сброс модификаций встроенным загрузчиком и синхронизирует сетевое API без ошибок 401 Unauthorized.',
+    'features.laa.desc': 'Снимает стандартный лимит 2048 МБ 32-битного движка GTA SA. Игра получает доступ к полным 4 ГБ виртуального адресного пространства для HD-текстур, кастомного транспорта и ресурсоёмких модификаций.',
+    'features.guard.title': 'Первая адаптация: Motion Project',
+    'features.guard.desc': 'Motion стал первым лаунчером с бесшовной поддержкой «из коробки»: автоматический обход сброса файлов при обновлениях, синхронизация сетевого API и фоновая служба в трее.',
     'features.diag.title': 'Самодиагностика и отчёты',
     'features.diag.desc': 'Встроенный генератор HTML-отчёта диагностирует поддержку Vulkan драйвером вашей видеокарты, статус LAA-флагов, целостность dll-библиотек и формирует готовый лог для решения проблем.',
     'specs.title': 'Системные требования и рекомендации',
-    'specs.subtitle': 'Выберите оптимальную версию DXVK для вашей видеокарты',
+    'specs.subtitle': 'Подберите оптимальную версию DXVK для вашей видеокарты',
     'specs.recModern': 'Для современных видеокарт (NVIDIA GTX 10xx+, RTX, AMD RX 5000/6000/7000, Intel Arc). Максимальный FPS, асинхронные шейдеры, Vulkan 1.3+.',
     'specs.recBalanced': 'Идеальный баланс совместимости и стабильности. Подходит для NVIDIA GTX 9xx/7xx и AMD RX 4xx/5xx.',
     'specs.recLegacy': 'Для старых видеокарт и встроенной графики (Vulkan 1.1). Минимальные системные требования.',
-    'reviews.title': 'Отзывы пользователей',
-    'reviews.subtitle': 'Реальные отзывы игроков Motion Project, загружаемые напрямую из GitHub',
+    'reviews.title': 'Реальные отзывы игроков',
+    'reviews.subtitle': 'Публикуются напрямую в GitHub Issues с меткой «отзыв»',
     'reviews.btnWrite': 'Написать отзыв',
     'reviews.loading': 'Загрузка отзывов из GitHub Issues...',
+    'reviews.emptyTitle': 'Пока нет отзывов',
+    'reviews.emptyText': 'Будьте первым, кто оставит свой отзыв о SAPatcher!',
     'reviews.ctaTitle': 'Играете с SAPatcher? Поделитесь впечатлениями!',
-    'reviews.ctaSubtitle': 'Ваш отзыв публикуется в официальном репозитории с меткой feedback и помогает развивать проект.',
+    'reviews.ctaSubtitle': 'Ваш отзыв публикуется в официальном репозитории с меткой отзыв и помогает развивать проект.',
     'reviews.ctaBtn': 'Оставить отзыв',
     'faq.title': 'Часто задаваемые вопросы',
-    'faq.q1': 'Банят ли за использование SAPatcher?',
-    'faq.a1': 'Нет. SAPatcher — это графический оптимизатор и расширитель памяти. Он не содержит читов, инжекторов стороннего кода или запрещённых модификаций, сохраняя 100% совместимость с античитом Motion Project.',
-    'faq.q2': 'Что делать, если при запуске чёрный экран или вылет?',
-    'faq.a2': 'Попробуйте переключить версию DXVK в SAPatcher на более раннюю (например, 2.3 или 1.10.3), либо обновите видеодрайвер. Также используйте встроенную кнопку «Генерация отчёта диагностики» для выявления несовместимостей.',
-    'faq.q3': 'Как вернуть оригинальный лаунчер без изменений?',
-    'faq.a3': 'В интерфейсе SAPatcher нажмите кнопку «Откатить лаунчер». Программа восстановит оригинальный немодифицированный app.asar из резервной копии.',
+    'faq.q1': 'Работает ли SAPatcher с обычной GTA SA, SA-MP и CRMP?',
+    'faq.a1': 'Да! SAPatcher разработан как универсальное решение для GTA San Andreas, клиентов SA-MP и CRMP. Он снимает лимит памяти 4GB LAA и внедряет Vulkan-транслятор DXVK в любую сборку. Motion Project — это первый лаунчер, для которого реализована полная бесшовная интеграция.',
+    'faq.q2': 'Банят ли за использование SAPatcher?',
+    'faq.a2': 'Нет. SAPatcher является графическим оптимизатором и расширителем памяти. Он не содержит читов, инжекторов стороннего кода или запрещённых модификаций, сохраняя 100% совместимость с античитами серверов.',
+    'faq.q3': 'Что делать, если при запуске чёрный экран или вылет?',
+    'faq.a3': 'Попробуйте переключить версию DXVK в SAPatcher на более раннюю (например, 2.3 или 1.10.3), либо обновите видеодрайвер. Также используйте встроенную кнопку «Генерация отчёта диагностики» для выявления несовместимостей.',
+    'faq.q4': 'Как вернуть оригинальный лаунчер без изменений?',
+    'faq.a4': 'В интерфейсе SAPatcher нажмите кнопку «Откатить лаунчер». Программа восстановит оригинальный немодифицированный app.asar из резервной копии.',
     'modal.title': 'Написать отзыв о SAPatcher',
-    'modal.desc': 'Отзыв будет опубликован в GitHub Issues с меткой «feedback»',
+    'modal.desc': 'Отзыв публикуется напрямую в GitHub Issues с меткой «отзыв»',
     'modal.ratingLabel': 'Оценка:',
     'modal.authorLabel': 'Ваше имя или ник:',
-    'modal.categoryLabel': 'Любимая функция:',
+    'modal.categoryLabel': 'Любимая функция / Клиент:',
     'modal.summaryLabel': 'Краткий заголовок:',
     'modal.prosLabel': 'Что понравилось (Плюсы):',
     'modal.commentLabel': 'Подробный комментарий:',
@@ -68,25 +71,24 @@ const translations = {
     'nav.specs': 'Compatibility',
     'nav.reviews': 'Reviews',
     'nav.faq': 'FAQ',
-    'hero.badge': 'Official Motion Project Optimizer Release',
+    'hero.badge': 'A project by PixelSmith Studio',
     'hero.titleGradient': 'SAPatcher',
-    'hero.titleSub': 'Maximum FPS & Rock-Solid Stability',
-    'hero.description': 'An all-in-one modernization utility: Direct3D 9 to Vulkan translation (DXVK), 4GB LAA memory limit unlocker, Out Of Memory crash prevention, and hardware diagnostics.',
+    'hero.titleSub': 'Universal GTA SA, SA-MP, CRMP & Motion Optimizer',
+    'hero.description': 'Complete modernization engine for GTA San Andreas and multiplayer clients: Vulkan API translation (DXVK), 4GB LAA virtual memory expansion, Out of Memory crash prevention, and turnkey Motion Project launcher adaptation.',
     'hero.btnDownload': 'Download SAPatcher',
-    'hero.btnSub': 'GitHub Release • Windows x64',
     'hero.btnReviews': 'Community Reviews',
-    'hero.metricFps': 'FPS Stability Boost',
-    'hero.metricRam': 'LAA Memory Space',
+    'hero.metricFps': 'FPS Stability & Pacing',
+    'hero.metricRam': 'GTA SA, SA-MP, CRMP',
     'hero.metricCrash': 'Out Of Memory Immune',
-    'hero.metricInstall': '1-Click Install & API Fix',
-    'features.title': 'Core Technologies',
-    'features.subtitle': 'Engineered for seamless integration and unrivaled gaming performance',
+    'hero.metricInstall': '1-Click Patch & Adapting',
+    'features.title': 'Core Capabilities',
+    'features.subtitle': 'Universal solutions for the entire GTA San Andreas ecosystem and modern launchers',
     'features.dxvk.title': 'DXVK Vulkan Revolution',
-    'features.dxvk.desc': 'Translates legacy Direct3D 9 commands into ultra-low overhead modern Vulkan API. Eliminates micro-stutters, drops, and unlocks full GPU potential.',
+    'features.dxvk.desc': 'Translates legacy Direct3D 9 commands into ultra-low overhead modern Vulkan API. Eliminates micro-stutters, frame drops, and unlocks full GPU potential in GTA SA, SA-MP, and CRMP.',
     'features.laa.title': '4GB RAM Patch (LAA)',
-    'features.laa.desc': 'Removes the 2048 MB 32-bit limitation of the GTA SA engine. The game safely addresses up to 4 GB of virtual memory for high-res textures, mods, and cars.',
-    'features.guard.title': 'Launcher Integration & Daemon',
-    'features.guard.desc': 'Background daemon supervises process authorization, prevents client reset by built-in updater, and fixes 401 Unauthorized errors in launcher network API.',
+    'features.laa.desc': 'Removes the 2048 MB 32-bit limitation of the GTA SA engine. The game safely addresses up to 4 GB of virtual memory for HD textures, vehicle mods, and custom scripts.',
+    'features.guard.title': 'First Adaptation: Motion Project',
+    'features.guard.desc': 'Motion Project is the first officially adapted launcher with seamless turnkey integration: auto-updater bypass, network API synchronization, and tray daemon supervision.',
     'features.diag.title': 'Self-Diagnostics & Reports',
     'features.diag.desc': 'Built-in HTML diagnostic generator audits your GPU Vulkan driver support, LAA flags, DLL checksums, and produces a complete audit report.',
     'specs.title': 'System Requirements & Matrix',
@@ -94,25 +96,29 @@ const translations = {
     'specs.recModern': 'For modern GPUs (NVIDIA GTX 10xx+, RTX, AMD RX 5000/6000/7000, Intel Arc). Peak FPS, async pipeline, Vulkan 1.3+.',
     'specs.recBalanced': 'Ideal balance of compatibility and performance. Perfect for NVIDIA GTX 9xx/7xx and AMD RX 4xx/5xx.',
     'specs.recLegacy': 'For older GPUs and integrated graphics (Vulkan 1.1). Minimal hardware requirements.',
-    'reviews.title': 'Community Reviews',
-    'reviews.subtitle': 'Real player feedback loaded live from official GitHub Issues',
+    'reviews.title': 'Real Player Reviews',
+    'reviews.subtitle': 'Loaded live from official GitHub Issues tagged with "отзыв"',
     'reviews.btnWrite': 'Write a Review',
     'reviews.loading': 'Fetching reviews from GitHub Issues...',
+    'reviews.emptyTitle': 'No reviews yet',
+    'reviews.emptyText': 'Be the first to share your experience with SAPatcher!',
     'reviews.ctaTitle': 'Playing with SAPatcher? Share your experience!',
-    'reviews.ctaSubtitle': 'Your review is posted directly to our GitHub repository under the feedback label.',
+    'reviews.ctaSubtitle': 'Your review is posted directly to our GitHub repository under the отзыв label.',
     'reviews.ctaBtn': 'Leave Review',
     'faq.title': 'Frequently Asked Questions',
-    'faq.q1': 'Can I get banned for using SAPatcher?',
-    'faq.a1': 'No. SAPatcher is purely a graphics optimization and memory allocation tool. It contains no cheats, injectors, or malicious hooks, maintaining full compliance with Motion Project.',
-    'faq.q2': 'What if I encounter a black screen or crash?',
-    'faq.a2': 'Try switching to DXVK 2.3 or 1.10.3 inside SAPatcher, or update your graphics driver. You can also click "Generate Diagnostics Report" to identify driver conflicts.',
-    'faq.q3': 'How do I revert to the original unmodified launcher?',
-    'faq.a3': 'Inside SAPatcher, simply click "Restore Launcher". The program instantly restores the original unmodified app.asar from backup.',
+    'faq.q1': 'Does SAPatcher work with standard GTA SA, SA-MP, and CRMP?',
+    'faq.a1': 'Yes! SAPatcher is engineered as a universal solution for GTA San Andreas, SA-MP, and CRMP clients. It removes the 2GB memory cap (4GB LAA) and installs the DXVK Vulkan layer into any game directory. Motion Project was the first launcher to receive complete out-of-the-box automation.',
+    'faq.q2': 'Can I get banned for using SAPatcher?',
+    'faq.a2': 'No. SAPatcher is purely a graphics optimization and memory allocation tool. It contains no cheats, injectors, or malicious hooks, maintaining full compliance with server anti-cheats.',
+    'faq.q3': 'What if I encounter a black screen or crash?',
+    'faq.a3': 'Try switching to DXVK 2.3 or 1.10.3 inside SAPatcher, or update your graphics driver. You can also click "Generate Diagnostics Report" to identify driver conflicts.',
+    'faq.q4': 'How do I revert to the original unmodified launcher?',
+    'faq.a4': 'Inside SAPatcher, simply click "Restore Launcher". The program instantly restores the original unmodified app.asar from backup.',
     'modal.title': 'Write a Review for SAPatcher',
-    'modal.desc': 'Your review will be submitted to GitHub Issues labeled as "feedback"',
+    'modal.desc': 'Your review will be submitted directly to GitHub Issues labeled as "отзыв"',
     'modal.ratingLabel': 'Rating:',
     'modal.authorLabel': 'Your Name or Handle:',
-    'modal.categoryLabel': 'Favorite Feature:',
+    'modal.categoryLabel': 'Favorite Feature / Client:',
     'modal.summaryLabel': 'Summary Title:',
     'modal.prosLabel': 'What you liked (Pros):',
     'modal.commentLabel': 'Detailed Review:',
@@ -122,6 +128,7 @@ const translations = {
 };
 
 let currentLang = localStorage.getItem('sapatcher_lang') || 'ru';
+let latestReleaseData = null;
 
 function applyLanguage(lang) {
   currentLang = lang;
@@ -139,86 +146,82 @@ function applyLanguage(lang) {
       el.textContent = dict[key];
     }
   });
+
+  updateDownloadButtonUI();
 }
 
 // --- GitHub Releases Integration ---
 async function fetchLatestRelease() {
-  const btn = document.getElementById('btnDownloadLatest');
-  const badge = document.getElementById('navVersionBadge');
-  const info = document.getElementById('releaseInfoText');
-
   try {
     const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`);
     if (!res.ok) throw new Error('No release found');
+    latestReleaseData = await res.json();
+  } catch (e) {
+    latestReleaseData = null;
+  }
+  updateDownloadButtonUI();
+}
 
-    const data = await res.json();
-    const tag = data.tag_name || 'v1.0.0';
+function updateDownloadButtonUI() {
+  const btn = document.getElementById('btnDownloadLatest');
+  const title = document.getElementById('btnDownloadTitle');
+  const badge = document.getElementById('navVersionBadge');
+  const info = document.getElementById('releaseInfoText');
+  const isRu = currentLang === 'ru';
+
+  if (latestReleaseData && latestReleaseData.tag_name) {
+    const tag = latestReleaseData.tag_name;
     badge.textContent = tag;
 
-    const winAsset = data.assets && data.assets.find(a => a.name.endsWith('.exe') || a.name.endsWith('.zip'));
+    const winAsset = latestReleaseData.assets && latestReleaseData.assets.find(a => a.name.endsWith('.exe') || a.name.endsWith('.zip'));
     if (winAsset) {
       btn.href = winAsset.browser_download_url;
       const sizeMb = (winAsset.size / (1024 * 1024)).toFixed(1);
-      info.textContent = `${tag} • Windows x64 • ${sizeMb} MB`;
+      title.textContent = isRu ? `Скачать SAPatcher ${tag}` : `Download SAPatcher ${tag}`;
+      info.textContent = `Release ${tag} • Windows x64 • ${sizeMb} MB`;
     } else {
-      btn.href = data.html_url || `https://github.com/PassatB5By/SAPatch/releases/tag/${tag}`;
-      info.textContent = `${tag} • Windows x64 Release`;
+      btn.href = latestReleaseData.html_url || `https://github.com/${GITHUB_REPO}/releases/latest`;
+      title.textContent = isRu ? `Скачать SAPatcher ${tag}` : `Download SAPatcher ${tag}`;
+      info.textContent = `Release ${tag} • Windows x64`;
     }
-  } catch (e) {
+  } else {
     badge.textContent = 'v1.0.0';
-    btn.href = `https://github.com/PassatB5By/SAPatch/releases`;
-    info.textContent = 'GitHub Release • Windows x64';
+    btn.href = `https://github.com/${GITHUB_REPO}/releases`;
+    title.textContent = isRu ? 'Скачать SAPatcher' : 'Download SAPatcher';
+    info.textContent = 'v1.0.0 • Windows x64';
   }
 }
 
-// --- GitHub Issues Reviews Integration ---
+// --- GitHub Issues Reviews Integration (Real Reviews Only) ---
 async function fetchReviews() {
   const container = document.getElementById('reviewsContainer');
-
-  const fallbackReviews = [
-    {
-      author: 'CyberDriver_99',
-      avatar: 'https://avatars.githubusercontent.com/u/10101?v=4',
-      date: '27.09.2026',
-      rating: 5,
-      category: 'DXVK Vulkan FPS Boost',
-      title: 'Фризы исчезли полностью, стабильные 144 FPS!',
-      body: 'Раньше на спавне и в густонаселённых местах FPS падал до 45. Накатил SAPatcher с DXVK 3.1.1 — игра летит, кадры ровные как по линейке. Очень доволен!',
-      pros: 'Плавный фреймрейт, простота настройки'
-    },
-    {
-      author: 'GTAModder_Pro',
-      avatar: 'https://avatars.githubusercontent.com/u/20202?v=4',
-      date: '26.09.2026',
-      rating: 5,
-      category: '4GB RAM Memory Patch',
-      title: 'Больше никаких вылетов Out Of Memory',
-      body: 'С кастомными машинами и текстурами игра стабильно падала через 20 минут из-за лимита 2ГБ. Патч 4GB LAA решил проблему раз и навсегда. 4 часа игры — 0 вылетов.',
-      pros: 'Исчезли краши памяти, игра держит любые скины'
-    },
-    {
-      author: 'VulkanRacer',
-      avatar: 'https://avatars.githubusercontent.com/u/30303?v=4',
-      date: '25.09.2026',
-      rating: 5,
-      category: 'Launcher Integration',
-      title: 'Удобно и безопасно',
-      body: 'Всё ставится в один клик. Лаунчер не сбрасывает настройки после перезапуска. Самодиагностика показала всю инфу по видеокарте.',
-      pros: 'Фоновая служба в трее, красивая тёмная тема'
-    }
-  ];
+  const isRu = currentLang === 'ru';
 
   try {
-    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/issues?labels=${FEEDBACK_LABEL}&state=all&per_page=30`);
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/issues?state=all&per_page=100`);
     if (!res.ok) throw new Error('API error');
 
     const issues = await res.json();
-    if (!Array.isArray(issues) || issues.length === 0) {
-      renderReviews(fallbackReviews);
+    if (!Array.isArray(issues)) {
+      renderEmptyState();
       return;
     }
 
-    const reviews = issues.map(iss => {
+    // Filter ONLY real reviews matching "отзыв" or "feedback" labels
+    const reviewIssues = issues.filter(iss => {
+      if (!iss.labels || !Array.isArray(iss.labels)) return false;
+      return iss.labels.some(l => {
+        const name = (l.name || '').toLowerCase();
+        return name === 'отзыв' || name === 'feedback' || name === 'review';
+      });
+    });
+
+    if (reviewIssues.length === 0) {
+      renderEmptyState();
+      return;
+    }
+
+    const reviews = reviewIssues.map(iss => {
       const body = iss.body || '';
       let rating = 5;
       const starMatch = body.match(/Rating:\s*([★\d]+)/i) || body.match(/(\d)\s*\/\s*5/);
@@ -227,7 +230,7 @@ async function fetchReviews() {
         if (!isNaN(num) && num >= 1 && num <= 5) rating = num;
       }
 
-      let category = 'General';
+      let category = 'GTA SA & Modding';
       const catMatch = body.match(/Category:\s*(.+)/i);
       if (catMatch) category = catMatch[1].trim();
 
@@ -242,15 +245,27 @@ async function fetchReviews() {
         rating,
         category,
         title: iss.title.replace(/^\[REVIEW\]\s*/i, ''),
-        body: body.replace(/###.+/g, '').replace(/\*\*.+\*\*/g, '').trim().substring(0, 300) || 'Great experience with SAPatcher!',
+        body: body.replace(/###.+/g, '').replace(/\*\*.+\*\*/g, '').trim().substring(0, 350) || 'Положительный отзыв о SAPatcher.',
         pros
       };
     });
 
     renderReviews(reviews);
   } catch (e) {
-    renderReviews(fallbackReviews);
+    renderEmptyState();
   }
+}
+
+function renderEmptyState() {
+  const container = document.getElementById('reviewsContainer');
+  const isRu = currentLang === 'ru';
+  container.innerHTML = `
+    <div class="empty-reviews-card">
+      <div class="empty-icon">💬</div>
+      <h4 class="empty-title">${isRu ? 'Пока нет отзывов' : 'No reviews yet'}</h4>
+      <p class="empty-desc">${isRu ? 'Опубликованные через форму отзывы появятся здесь автоматически после создания в GitHub Issues с меткой «отзыв».' : 'Reviews submitted through the form will appear here automatically once created in GitHub Issues with the "отзыв" label.'}</p>
+    </div>
+  `;
 }
 
 function renderReviews(list) {
@@ -319,7 +334,7 @@ function setupReviewModal() {
     });
   });
 
-  // Form submit -> build GitHub Issue creation link
+  // Form submit -> build GitHub Issue creation link with label "отзыв"
   form.addEventListener('submit', e => {
     e.preventDefault();
 
@@ -341,7 +356,7 @@ function setupReviewModal() {
       `### Detailed Review:\n${comment}`,
       '',
       '---',
-      '_Submitted via [SAPatcher Official Website](https://passatb5by.github.io/SAPatch/)_'
+      '_Submitted via [SAPatcher Official Website](https://passatb5by.github.io/SAPatch/) by [PixelSmith Studio](https://pixelsmith.ru)_'
     ].filter(Boolean).join('\n');
 
     const issueTitle = `[REVIEW] ${title}`;
