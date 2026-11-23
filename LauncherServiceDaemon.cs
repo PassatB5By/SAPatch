@@ -101,7 +101,8 @@ public static class LauncherServiceDaemon
                 {
                     status = "SAPATCHER_ACTIVE",
                     version = "1.0.0",
-                    gamePath = configuredGame
+                    gamePath = configuredGame,
+                    developerMode = SAPatcher.Guard.GuardManager.IsDeveloperModeActive
                 });
                 byte[] data = Encoding.UTF8.GetBytes(jsonResp);
                 res.ContentType = "application/json; charset=utf-8";

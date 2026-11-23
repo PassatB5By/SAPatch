@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Motion Launcher — Metro Edition</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="metro-body">
+  <div class="metro-container">
+    <!-- Top Bar / Titlebar -->
+    <header class="metro-topbar">
+      <div class="metro-brand">
+        <span class="metro-start-title">Пуск</span>
+        <span class="metro-subbrand">MOTION LAUNCHER <span class="metro-tag">METRO 8.1</span></span>
+      </div>
+      <div class="metro-user-deck">
+        <div class="metro-user-pill" id="userPill">
+          <div class="metro-avatar" id="avatarInitial">M</div>
+          <div class="metro-user-info">
+            <span class="metro-user-name" id="topUserName">Игрок</span>
+            <span class="metro-user-status" id="topUserStatus">Готов к игре</span>
+          </div>
+        </div>
+        <div class="metro-window-controls">
+          <button class="metro-btn-window" id="btnMinimize" title="Свернуть">
+            <svg width="12" height="12" viewBox="0 0 12 12"><path fill="currentColor" d="M1 9h10v2H1z"/></svg>
+          </button>
+          <button class="metro-btn-window btn-close" id="btnClose" title="Закрыть">
+            <svg width="12" height="12" viewBox="0 0 12 12"><path fill="currentColor" d="M1.5 1.5l9 9m0-9l-9 9" stroke="currentColor" stroke-width="1.8"/></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Panorama Scrolling Deck -->
+    <main class="metro-panorama" id="metroPanorama">
+      <!-- SECTION 1: СЕРВЕРЫ И ЗАПУСК -->
+      <section class="metro-group">
+        <h2 class="metro-group-title">Серверы и запуск</h2>
+        <div class="metro-grid grid-section-launch">
+          <!-- Hero Launch Tile (2x2 Big Square) -->
+          <div class="metro-tile tile-big tile-cobalt hero-tile" id="heroLaunchTile">
+            <div class="tile-top-row">
+              <div class="live-status-pill">
+                <span class="live-dot pulse"></span>
+                <span class="live-label">LIVE SERVER</span>
+              </div>
+              <span class="tile-ip-badge font-mono" id="heroServerIp">185.71.66.22:7777</span>
+            </div>
+            
+            <div class="hero-center-info">
+              <h1 class="hero-server-name" id="heroServerName">Motion Project | BLUE</h1>
+              <div class="hero-stats">
+                <span class="stat-number font-mono" id="heroOnlineCount">23</span>
+                <span class="stat-label">Игроков онлайн</span>
+              </div>
+            </div>
+
+            <div class="hero-bottom-action">
+              <button class="metro-action-btn" id="primaryActionBtn">
+                <span class="btn-icon" id="actionBtnIcon">▶</span>
+                <span class="btn-text" id="actionBtnText">ИГРАТЬ</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Download / Check Progress Tile (2x1 Wide Tile below Hero) -->
+          <div class="metro-tile tile-wide tile-teal" id="progressTile">
+            <div class="tile-content-fill">
+              <div class="progress-top">
+                <span class="progress-title" id="progressTitle">Ресурсы клиента</span>
+                <span class="progress-speed font-mono" id="progressSpeed">0 KB/s</span>
+              </div>
+              <div class="metro-progress-track">
+                <div class="metro-progress-fill" id="progressBar" style="width: 100%;"></div>
+              </div>
+              <div class="progress-bottom">
+                <span id="progressState">Файлы синхронизированы</span>
+                <span class="font-mono font-bold" id="progressPercent">100%</span>
+              </div>
+            </div>
+            <div class="tile-card-footer">
+              <button class="metro-inline-btn" id="btnCheckFiles">Проверить файлы</button>
+            </div>
+          </div>
+
+          <!-- Extra Server Live Tiles Container -->
+          <div class="metro-dynamic-servers-slot" id="serverTilesContainer">
+            <!-- Populated via JS with 2x1 tiles for each server -->
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 2: ПЕРСОНАЖ И ФАЙЛЫ -->
+      <section class="metro-group">
+        <h2 class="metro-group-title">Персонаж и файлы</h2>
+        <div class="metro-grid grid-section-profile">
+          <!-- Nickname Tile (2x1 Wide Tile) -->
+          <div class="metro-tile tile-wide tile-purple" id="nickTile">
+            <div class="tile-content-fill">
+              <div class="tile-header-mini">
+                <span class="tile-mini-title">Игровой никнейм</span>
+                <span class="font-mono text-xs">Ivan_Ivanov</span>
+              </div>
+              <div class="metro-input-group">
+                <input type="text" id="nickInput" class="metro-input font-mono" placeholder="Имя_Фамилия" maxlength="24">
+                <button class="metro-submit-btn" id="btnSaveNick" title="Сохранить никнейм">✓</button>
+              </div>
+            </div>
+            <div class="tile-card-footer">
+              <span class="tile-caption" id="nickStatusHint">Формат: Имя_Фамилия</span>
+            </div>
+          </div>
+
+          <!-- Game Directory Tile (2x1 Wide Tile) -->
+          <div class="metro-tile tile-wide tile-orange" id="gameDirTile">
+            <div class="tile-content-fill">
+              <span class="tile-mini-title">Директория GTA San Andreas</span>
+              <span class="game-path-display font-mono" id="gamePathText">C:\games\motion</span>
+              <div class="path-btn-row">
+                <button class="metro-path-btn" id="btnSelectGameDir">Выбрать папку</button>
+                <button class="metro-path-btn btn-ghost" id="btnOpenGameDir">В проводнике</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Screenshots Tile (1x1 Square Tile) -->
+          <div class="metro-tile tile-square tile-crimson" id="screensTile">
+            <div class="tile-center-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </div>
+            <div class="tile-card-footer">
+              <span class="tile-caption-bold">Скриншоты F8</span>
+            </div>
+          </div>
+
+          <!-- HWID Key Tile (1x1 Square Tile) -->
+          <div class="metro-tile tile-square tile-emerald" id="hwidTile">
+            <div class="tile-center-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+            </div>
+            <div class="tile-card-footer">
+              <span class="tile-caption-bold">HWID Ключ</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 3: ПАРАМЕТРЫ И ЩИТ -->
+      <section class="metro-group">
+        <h2 class="metro-group-title">Параметры и щит</h2>
+        <div class="metro-grid grid-section-settings">
+          <!-- Widescreen Fix (1x1 Tile) -->
+          <div class="metro-tile tile-square tile-blue toggle-tile" id="widescreenTile" data-setting="wideScreenFix">
+            <div class="tile-toggle-top">
+              <span class="toggle-icon">📐</span>
+              <span class="toggle-badge font-mono" id="widescreenStatus">ВКЛ</span>
+            </div>
+            <div class="tile-card-footer">
+              <span class="tile-caption-bold">Widescreen Fix</span>
+              <span class="tile-caption-sub">16:9 / 21:9 геометрия</span>
+            </div>
+          </div>
+
+          <!-- High Performance (1x1 Tile) -->
+          <div class="metro-tile tile-square tile-teal toggle-tile" id="highPerfTile" data-setting="highPerformanceEnabled">
+            <div class="tile-toggle-top">
+              <span class="toggle-icon">⚡</span>
+              <span class="toggle-badge font-mono" id="highPerfStatus">ВЫКЛ</span>
+            </div>
+            <div class="tile-card-footer">
+              <span class="tile-caption-bold">Скорость</span>
+              <span class="tile-caption-sub">Приоритет потоков</span>
+            </div>
+          </div>
+
+          <!-- Winter Mode (1x1 Tile) -->
+          <div class="metro-tile tile-square tile-indigo toggle-tile" id="winterTile" data-setting="winter">
+            <div class="tile-toggle-top">
+              <span class="toggle-icon">❄️</span>
+              <span class="toggle-badge font-mono" id="winterStatus">ВЫКЛ</span>
+            </div>
+            <div class="tile-card-footer">
+              <span class="tile-caption-bold">Зимний режим</span>
+              <span class="tile-caption-sub">Снег и атмосфера</span>
+            </div>
+          </div>
+
+          <!-- Run as Admin (1x1 Tile) -->
+          <div class="metro-tile tile-square tile-orange toggle-tile" id="adminTile" data-setting="isRunnableAsAdmin">
+            <div class="tile-toggle-top">
+              <span class="toggle-icon">🛡️</span>
+              <span class="toggle-badge font-mono" id="adminStatus">ВЫКЛ</span>
+            </div>
+            <div class="tile-card-footer">
+              <span class="tile-caption-bold">Администратор</span>
+              <span class="tile-caption-sub">Привилегии процесса</span>
+            </div>
+          </div>
+
+          <!-- Graphics Lock Tile (1x1 Dark Tile) -->
+          <div class="metro-tile tile-square tile-slate" id="graphicsLockTile">
+            <div class="tile-toggle-top">
+              <span class="toggle-icon">🎮</span>
+              <span class="shield-mini-badge font-mono">LOCK</span>
+            </div>
+            <div class="tile-card-footer">
+              <span class="tile-caption-bold">Графика</span>
+              <span class="tile-caption-sub text-cyan">Standard (SAPatcher)</span>
+            </div>
+          </div>
+
+          <!-- Auto-close Lock Tile (1x1 Dark Tile) -->
+          <div class="metro-tile tile-square tile-slate" id="autocloseLockTile">
+            <div class="tile-toggle-top">
+              <span class="toggle-icon">🔒</span>
+              <span class="shield-mini-badge font-mono">LOCK</span>
+            </div>
+            <div class="tile-card-footer">
+              <span class="tile-caption-bold">Лаунчер</span>
+              <span class="tile-caption-sub text-green">Не сворачивать</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 4: СООБЩЕСТВО -->
+      <section class="metro-group">
+        <h2 class="metro-group-title">Сообщество</h2>
+        <div class="metro-grid grid-section-social">
+          <div class="metro-tile tile-square tile-vk link-tile" data-url="https://vk.com/motion_gta">
+            <div class="tile-center-text">VK</div>
+            <div class="tile-card-footer"><span class="tile-caption-bold">ВКонтакте</span></div>
+          </div>
+          <div class="metro-tile tile-square tile-telegram link-tile" data-url="https://t.me/motion_gta">
+            <div class="tile-center-text">TG</div>
+            <div class="tile-card-footer"><span class="tile-caption-bold">Telegram</span></div>
+          </div>
+          <div class="metro-tile tile-square tile-discord link-tile" data-url="https://discord.gg/motion">
+            <div class="tile-center-text">DS</div>
+            <div class="tile-card-footer"><span class="tile-caption-bold">Discord</span></div>
+          </div>
+          <div class="metro-tile tile-square tile-site link-tile" data-url="https://mn-p.com">
+            <div class="tile-center-text">WEB</div>
+            <div class="tile-card-footer"><span class="tile-caption-bold">Сайт проекта</span></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom App Bar -->
+    <footer class="metro-appbar">
+      <div class="metro-appbar-left">
+        <span class="metro-badge font-mono" id="launcherVersion">v2.0.0</span>
+        <span class="metro-badge badge-shield font-mono">SAPATCHER SECURE</span>
+        <span class="metro-status-text" id="statusMessage">Готов к запуску игры</span>
+      </div>
+      <div class="metro-appbar-right">
+        <button class="metro-appbar-btn" id="btnHelp" title="Помощь">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <span>Справка</span>
+        </button>
+      </div>
+    </footer>
+
+    <!-- Toast Notifications -->
+    <div class="metro-toast-container" id="toastContainer"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

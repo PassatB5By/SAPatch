@@ -21,9 +21,22 @@ public class AppSettings
     public bool EnableFpsLimit { get; set; } = false;
     public int MaxFrameRate { get; set; } = 200;
     public bool MinimizeToTray { get; set; } = true;
+    public bool EnableElectronLogging { get; set; } = true;
+    public string MotionLauncherUiTheme { get; set; } = "v2";
     public string MotionGamePath { get; set; } = string.Empty;
     public string MotionLauncherPath { get; set; } = string.Empty;
     public System.Collections.Generic.Dictionary<string, string> DiscoveredGamePaths { get; set; } = new();
+
+    public bool OverlayEnabled { get; set; } = true;
+    public string OverlayHotkey { get; set; } = "F11";
+    public int OverlayHotkeyCode { get; set; } = 0x7A;
+    public string OverlayTitle { get; set; } = "SAPatcher-1.1.0-Beta";
+    public bool OverlayShowGear { get; set; } = true;
+    public bool OverlayShowFps { get; set; } = true;
+    public int OverlayPosX { get; set; } = 24;
+    public int OverlayPosY { get; set; } = 24;
+    public double OverlayScale { get; set; } = 1.0;
+    public string OverlayPosition { get; set; } = "top-left";
 }
 
 public static class SettingsManager

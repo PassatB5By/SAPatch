@@ -8,4 +8,11 @@ public interface IGuardProvider
     string GuardHeader { get; }
     string GuardFooter { get; }
     string GetGuardScript();
+
+    bool IsDeveloperModeActive { get; }
+    bool CheckHardwareAllowed();
+    bool AuthenticateDeveloper(string password);
+    void SetDeveloperMode(bool enabled);
+    string GetHardwareSummary();
 }
+

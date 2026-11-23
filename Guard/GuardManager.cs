@@ -44,39 +44,74 @@ public static class GuardManager
 
     public static string GetGuardScript() => ActiveProvider.GetGuardScript();
 
+    public static bool IsDeveloperModeActive => ActiveProvider.IsDeveloperModeActive;
+
+    public static bool CheckHardwareAllowed() => ActiveProvider.CheckHardwareAllowed();
+
+    public static bool AuthenticateDeveloper(string password) => ActiveProvider.AuthenticateDeveloper(password);
+
+    public static void SetDeveloperMode(bool enabled) => ActiveProvider.SetDeveloperMode(enabled);
+
+    public static string GetHardwareSummary() => ActiveProvider.GetHardwareSummary();
+
     private static IGuardProvider InitializeProvider()
     {
         try
         {
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            string securityDllPath = Path.Combine(baseDir, "SAPatcher.Security.dll");
+            string curDir = Directory.GetCurrentDirectory();
 
-            if (File.Exists(securityDllPath))
+            string[] candidatePaths = new[]
             {
-                var asm = Assembly.LoadFrom(securityDllPath);
-                foreach (var type in asm.GetExportedTypes())
-                {
-                    if (type.IsAbstract || type.IsInterface) continue;
+                Path.Combine(baseDir, "SAPatcher.Security.dll"),
+                Path.Combine(curDir, "SAPatcher.Security.dll"),
+                Path.Combine(curDir, "SecuritySource", "SAPatcher.Security", "bin", "Release", "net9.0-windows10.0.19041.0", "SAPatcher.Security.dll"),
+                Path.Combine(curDir, "SecuritySource", "SAPatcher.Security", "bin", "Debug", "net9.0-windows10.0.19041.0", "SAPatcher.Security.dll"),
+                Path.Combine(baseDir, "..", "..", "..", "SecuritySource", "SAPatcher.Security", "bin", "Release", "net9.0-windows10.0.19041.0", "SAPatcher.Security.dll"),
+                Path.Combine(baseDir, "..", "..", "..", "SecuritySource", "SAPatcher.Security", "bin", "Debug", "net9.0-windows10.0.19041.0", "SAPatcher.Security.dll"),
+                @"f:\project\SAPatcher\SAPatcher.Security.dll",
+                @"f:\project\SAPatcher\SecuritySource\SAPatcher.Security\bin\Release\net9.0-windows10.0.19041.0\SAPatcher.Security.dll",
+                @"f:\project\SAPatcher\SecuritySource\SAPatcher.Security\bin\Debug\net9.0-windows10.0.19041.0\SAPatcher.Security.dll",
+                @"f:\project\SAPatcher\bin\Release\net9.0-windows10.0.19041.0\SAPatcher.Security.dll",
+                @"f:\project\SAPatcher\bin\Debug\net9.0-windows10.0.19041.0\SAPatcher.Security.dll"
+            };
 
-                    if (typeof(IGuardProvider).IsAssignableFrom(type))
+            foreach (var securityDllPath in candidatePaths)
+            {
+                if (File.Exists(securityDllPath))
+                {
+                    try
                     {
-                        var instance = Activator.CreateInstance(type) as IGuardProvider;
-                        if (instance != null)
+                        var asm = Assembly.LoadFrom(securityDllPath);
+                        foreach (var type in asm.GetExportedTypes())
                         {
-                            Console.WriteLine($"[GuardManager] Успешно загружен закрытый модуль: {instance.ProviderName} v{instance.Version}");
-                            return instance;
+                            if (type.IsAbstract || type.IsInterface) continue;
+
+                            if (typeof(IGuardProvider).IsAssignableFrom(type))
+                            {
+                                var instance = Activator.CreateInstance(type) as IGuardProvider;
+                                if (instance != null)
+                                {
+                                    Console.WriteLine($"[GuardManager] Успешно загружен закрытый модуль: {instance.ProviderName} v{instance.Version} из {securityDllPath}");
+                                    return instance;
+                                }
+                            }
+
+                            var getScriptMethod = type.GetMethod("GetGuardScript", BindingFlags.Public | BindingFlags.Instance);
+                            if (getScriptMethod != null)
+                            {
+                                var instance = Activator.CreateInstance(type);
+                                if (instance != null)
+                                {
+                                    Console.WriteLine($"[GuardManager] Успешно подключен адаптер закрытого модуля: {type.FullName} из {securityDllPath}");
+                                    return new ReflectionGuardAdapter(instance, type);
+                                }
+                            }
                         }
                     }
-
-                    var getScriptMethod = type.GetMethod("GetGuardScript", BindingFlags.Public | BindingFlags.Instance);
-                    if (getScriptMethod != null)
+                    catch (Exception ex)
                     {
-                        var instance = Activator.CreateInstance(type);
-                        if (instance != null)
-                        {
-                            Console.WriteLine($"[GuardManager] Успешно подключен адаптер закрытого модуля: {type.FullName}");
-                            return new ReflectionGuardAdapter(instance, type);
-                        }
+                        Console.WriteLine($"[GuardManager] Предупреждение загрузки {securityDllPath}: {ex.Message}");
                     }
                 }
             }
@@ -98,6 +133,11 @@ public static class GuardManager
         private readonly PropertyInfo? _propVer;
         private readonly PropertyInfo? _propHeader;
         private readonly PropertyInfo? _propFooter;
+        private readonly PropertyInfo? _propDevActive;
+        private readonly MethodInfo? _methCheckHw;
+        private readonly MethodInfo? _methAuthDev;
+        private readonly MethodInfo? _methSetDev;
+        private readonly MethodInfo? _methGetHw;
 
         public ReflectionGuardAdapter(object instance, Type type)
         {
@@ -107,6 +147,11 @@ public static class GuardManager
             _propVer = type.GetProperty("Version");
             _propHeader = type.GetProperty("GuardHeader");
             _propFooter = type.GetProperty("GuardFooter");
+            _propDevActive = type.GetProperty("IsDeveloperModeActive");
+            _methCheckHw = type.GetMethod("CheckHardwareAllowed", BindingFlags.Public | BindingFlags.Instance);
+            _methAuthDev = type.GetMethod("AuthenticateDeveloper", BindingFlags.Public | BindingFlags.Instance);
+            _methSetDev = type.GetMethod("SetDeveloperMode", BindingFlags.Public | BindingFlags.Instance);
+            _methGetHw = type.GetMethod("GetHardwareSummary", BindingFlags.Public | BindingFlags.Instance);
         }
 
         public string ProviderName => _propName?.GetValue(_instance)?.ToString() ?? "SAPatcher Security Module";
@@ -114,6 +159,13 @@ public static class GuardManager
         public bool IsProprietary => true;
         public string GuardHeader => _propHeader?.GetValue(_instance)?.ToString() ?? "// === SAPATCHER SECURITY & INTEGRATION GUARD START ===";
         public string GuardFooter => _propFooter?.GetValue(_instance)?.ToString() ?? "// === SAPATCHER SECURITY & INTEGRATION GUARD END ===";
-        public string GetGuardScript() => _getScript.Invoke(_instance, null)?.ToString() ?? "";
+        public string GetGuardScript() => _getScript?.Invoke(_instance, null)?.ToString() ?? "";
+
+        public bool IsDeveloperModeActive => (bool)(_propDevActive?.GetValue(_instance) ?? false);
+        public bool CheckHardwareAllowed() => (bool)(_methCheckHw?.Invoke(_instance, null) ?? false);
+        public bool AuthenticateDeveloper(string password) => (bool)(_methAuthDev?.Invoke(_instance, new object[] { password }) ?? false);
+        public void SetDeveloperMode(bool enabled) => _methSetDev?.Invoke(_instance, new object[] { enabled });
+        public string GetHardwareSummary() => _methGetHw?.Invoke(_instance, null)?.ToString() ?? "MSI MPG B550 GAMING PLUS (Authorized)";
     }
 }
+

@@ -58,6 +58,21 @@ public class PatchStatusResult
 
     [JsonPropertyName("candidatePaths")]
     public List<string> CandidatePaths { get; set; } = new();
+
+    [JsonPropertyName("detectedVersion")]
+    public string DetectedVersion { get; set; } = string.Empty;
+
+    [JsonPropertyName("isVersionSupported")]
+    public bool IsVersionSupported { get; set; } = true;
+
+    [JsonPropertyName("isVersionBlocked")]
+    public bool IsVersionBlocked { get; set; }
+
+    [JsonPropertyName("hasCompatibilityWarning")]
+    public bool HasCompatibilityWarning { get; set; }
+
+    [JsonPropertyName("versionWarningMessage")]
+    public string VersionWarningMessage { get; set; } = string.Empty;
 }
 
 public class IntegrityManifestEntry
@@ -72,7 +87,7 @@ public class IntegrityManifestEntry
 public class IntegrityManifest
 {
     [JsonPropertyName("version")]
-    public string Version { get; set; } = "1.2.46-SAPatcher";
+    public string Version { get; set; } = "2.0.0-SAPatcher";
 
     [JsonPropertyName("createdAt")]
     public string CreatedAt { get; set; } = DateTime.UtcNow.ToString("o");
@@ -97,6 +112,15 @@ public class PatchExecutionResult
 
     [JsonPropertyName("status")]
     public PatchStatusResult Status { get; set; } = new();
+
+    [JsonPropertyName("isVersionBlocked")]
+    public bool IsVersionBlocked { get; set; }
+
+    [JsonPropertyName("hasCompatibilityWarning")]
+    public bool HasCompatibilityWarning { get; set; }
+
+    [JsonPropertyName("versionWarningMessage")]
+    public string VersionWarningMessage { get; set; } = string.Empty;
 }
 
 public class GameIntegrityCheckResult
@@ -174,9 +198,99 @@ public static class LauncherPatcherService
     public static string GuardFooter => Guard.GuardManager.GuardFooter;
     public static string GuardScript => Guard.GuardManager.GetGuardScript();
 
+    public static readonly string ElectronLoggingHeader = "// === SAPATCHER ELECTRON DEBUG LOGGING START ===";
+    public static readonly string ElectronLoggingFooter = "// === SAPATCHER ELECTRON DEBUG LOGGING END ===";
+
+    public static string GetElectronLoggingScript()
+    {
+        return @"// === SAPATCHER ELECTRON DEBUG LOGGING START ===
+(function() {
+    try {
+        const _fs = require('fs');
+        const _path = require('path');
+        const _electron = require('electron');
+        const _app = _electron.app;
+
+        const _appDir = _path.resolve(__dirname, '..');
+        const _resourcesDir = _path.resolve(_appDir, '..');
+        const _rootDir = _path.dirname(_resourcesDir);
+        const _parentDir = _path.dirname(_rootDir);
+        const _logFile = _path.join(_rootDir, 'SAPatcher_Electron.log');
+
+        if (_app && _app.commandLine) {
+            try {
+                _app.commandLine.appendSwitch('enable-logging');
+                _app.commandLine.appendSwitch('log-file', _logFile);
+                _app.commandLine.appendSwitch('v', '1');
+            } catch(e) {}
+        }
+
+        function _sa_format(args) {
+            return args.map(a => {
+                if (a instanceof Error) return a.stack || a.message;
+                if (typeof a === 'object') {
+                    try { return JSON.stringify(a); } catch(e) { return String(a); }
+                }
+                return String(a);
+            }).join(' ');
+        }
+
+        function _sa_append(level, text) {
+            try {
+                const time = new Date().toISOString();
+                const line = `[${time}] [${level}] ${text}\r\n`;
+                _fs.appendFileSync(_logFile, line, 'utf8');
+                try {
+                    _fs.appendFileSync(_path.join(_appDir, 'SAPatcher_Electron.log'), line, 'utf8');
+                } catch(e) {}
+                try {
+                    _fs.appendFileSync(_path.join(_parentDir, 'SAPatcher_Electron.log'), line, 'utf8');
+                } catch(e) {}
+            } catch(e) {}
+        }
+
+        _sa_append('SYSTEM', '================================================================================');
+        _sa_append('SYSTEM', `[SAPatcher] Electron Main Process Starting | PID: ${process.pid}`);
+        _sa_append('SYSTEM', `Node: ${process.versions.node} | Electron: ${process.versions.electron} | Chrome: ${process.versions.chrome}`);
+        _sa_append('SYSTEM', `ExecPath: ${process.execPath}`);
+        _sa_append('SYSTEM', `CWD: ${process.cwd()}`);
+        _sa_append('SYSTEM', '================================================================================');
+
+        const _origLog = console.log;
+        const _origErr = console.error;
+        const _origWarn = console.warn;
+        const _origInfo = console.info;
+
+        console.log = function(...args) { _sa_append('INFO', _sa_format(args)); _origLog.apply(console, args); };
+        console.error = function(...args) { _sa_append('ERROR', _sa_format(args)); _origErr.apply(console, args); };
+        console.warn = function(...args) { _sa_append('WARN', _sa_format(args)); _origWarn.apply(console, args); };
+        console.info = function(...args) { _sa_append('INFO', _sa_format(args)); _origInfo.apply(console, args); };
+
+        process.on('uncaughtException', (err) => {
+            _sa_append('FATAL_UNCAUGHT_EXCEPTION', err && err.stack ? err.stack : String(err));
+        });
+        process.on('unhandledRejection', (reason) => {
+            _sa_append('UNHANDLED_REJECTION', reason && reason.stack ? reason.stack : String(reason));
+        });
+    } catch(e) {
+        try { console.error('[SAPatcher Logging Harness Error]', e); } catch(_) {}
+    }
+})();
+// === SAPATCHER ELECTRON DEBUG LOGGING END ===";
+    }
+
     public static string StripGuard(string jsCode)
     {
         string result = jsCode;
+        if (result.Contains(ElectronLoggingHeader) && result.Contains(ElectronLoggingFooter))
+        {
+            int s = result.IndexOf(ElectronLoggingHeader, StringComparison.Ordinal);
+            int e = result.IndexOf(ElectronLoggingFooter, s, StringComparison.Ordinal);
+            if (s >= 0 && e >= 0)
+            {
+                result = result.Remove(s, (e + ElectronLoggingFooter.Length) - s).Trim();
+            }
+        }
         foreach (var header in Guard.GuardManager.RecognizedHeaders)
         {
             if (result.Contains(header))
@@ -277,6 +391,137 @@ public static class LauncherPatcherService
         return dirs;
     }
 
+    public class LauncherVersionInfo
+    {
+        public Version? Version { get; set; }
+        public string RawVersion { get; set; } = string.Empty;
+        public bool IsVersionBlocked { get; set; }
+        public bool HasCompatibilityWarning { get; set; }
+        public string WarningMessage { get; set; } = string.Empty;
+        public bool IsV2OrHigher => Version != null &&
+            new Version(Version.Major, Version.Minor, Math.Max(0, Version.Build), Math.Max(0, Version.Revision)) >= new Version(2, 0, 0, 0);
+    }
+
+    public static LauncherVersionInfo EvaluateLauncherVersion(string appDir)
+    {
+        var info = new LauncherVersionInfo();
+        if (string.IsNullOrWhiteSpace(appDir)) return info;
+
+        string rawVer = string.Empty;
+        string[] pkgCandidates = new[]
+        {
+            Path.Combine(appDir, "resources", "app", "package.json"),
+            Path.Combine(appDir, "resources", "unpacked", "package.json"),
+            Path.Combine(appDir, "resources", "original_backup", "package.json"),
+            Path.Combine(appDir, "package.json")
+        };
+
+        foreach (var pkg in pkgCandidates)
+        {
+            if (File.Exists(pkg))
+            {
+                try
+                {
+                    string txt = File.ReadAllText(pkg, Encoding.UTF8);
+                    using var doc = JsonDocument.Parse(txt);
+                    if (doc.RootElement.TryGetProperty("version", out var vElem))
+                    {
+                        string vStr = vElem.GetString() ?? "";
+                        if (!string.IsNullOrWhiteSpace(vStr))
+                        {
+                            rawVer = vStr.Trim();
+                            break;
+                        }
+                    }
+                }
+                catch {}
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(rawVer))
+        {
+            string dirName = Path.GetFileName(appDir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            if (dirName.StartsWith("app-", StringComparison.OrdinalIgnoreCase))
+            {
+                rawVer = dirName.Substring(4).Trim();
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(rawVer))
+        {
+            string asarPath = Path.Combine(appDir, "resources", "app.asar");
+            if (File.Exists(asarPath))
+            {
+                try
+                {
+                    using var fs = new FileStream(asarPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    using var br = new BinaryReader(fs);
+                    uint u1 = br.ReadUInt32();
+                    uint headerSize = br.ReadUInt32();
+                    uint u3 = br.ReadUInt32();
+                    uint jsonSize = br.ReadUInt32();
+                    if (jsonSize > 0 && jsonSize < 2_000_000)
+                    {
+                        byte[] jsonBytes = br.ReadBytes((int)jsonSize);
+                        string json = Encoding.UTF8.GetString(jsonBytes);
+                        var m = System.Text.RegularExpressions.Regex.Match(json, "\"package\\.json\"\\s*:\\s*\\{[^}]*\"size\"\\s*:\\s*(\\d+)[^}]*\"offset\"\\s*:\\s*\"(\\d+)\"");
+                        if (m.Success && long.TryParse(m.Groups[1].Value, out long pkgSize) && long.TryParse(m.Groups[2].Value, out long pkgOffset))
+                        {
+                            long absOffset = 8 + headerSize + pkgOffset;
+                            fs.Seek(absOffset, SeekOrigin.Begin);
+                            byte[] pkgBytes = br.ReadBytes((int)pkgSize);
+                            string pkgJson = Encoding.UTF8.GetString(pkgBytes);
+                            using var doc = JsonDocument.Parse(pkgJson);
+                            if (doc.RootElement.TryGetProperty("version", out var vElem))
+                            {
+                                rawVer = vElem.GetString() ?? "";
+                            }
+                        }
+                    }
+                }
+                catch {}
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(rawVer))
+        {
+            rawVer = "2.0.0";
+        }
+
+        info.RawVersion = rawVer;
+
+        string cleaned = rawVer.Trim();
+        int dashIdx = cleaned.IndexOf('-');
+        if (dashIdx >= 0) cleaned = cleaned.Substring(0, dashIdx).Trim();
+        if (cleaned.StartsWith("v", StringComparison.OrdinalIgnoreCase)) cleaned = cleaned.Substring(1).Trim();
+
+        if (Version.TryParse(cleaned, out var parsed))
+        {
+            info.Version = parsed;
+            var norm = new Version(parsed.Major, parsed.Minor, Math.Max(0, parsed.Build), Math.Max(0, parsed.Revision));
+            var minVer = new Version(1, 2, 46, 0);
+            var maxTestedVer = new Version(2, 0, 0, 0);
+
+            if (norm < minVer)
+            {
+                info.IsVersionBlocked = true;
+                info.WarningMessage = $"Версия лаунчера ({rawVer}) устарела (< 1.2.46). Патчинг заблокирован. Пожалуйста, обновите Motion Launcher.";
+            }
+            else if (norm > maxTestedVer)
+            {
+                info.HasCompatibilityWarning = true;
+                info.WarningMessage = $"Внимание: версия лаунчера ({rawVer}) новее протестированных (1.2.46 и 2.0.0.0). Возможны проблемы совместимости!";
+            }
+        }
+        else
+        {
+            info.HasCompatibilityWarning = true;
+            info.WarningMessage = $"Не удалось определить точную версию лаунчера ({rawVer}). Патчинг выполняется в режиме совместимости.";
+        }
+
+        return info;
+    }
+
     public static PatchStatusResult GetStatus(string? preferredPath = null)
     {
         var status = new PatchStatusResult();
@@ -323,6 +568,13 @@ public static class LauncherPatcherService
 
         if (!string.IsNullOrEmpty(appDir))
         {
+            var verInfo = EvaluateLauncherVersion(appDir);
+            status.DetectedVersion = verInfo.RawVersion;
+            status.IsVersionSupported = !verInfo.IsVersionBlocked;
+            status.IsVersionBlocked = verInfo.IsVersionBlocked;
+            status.HasCompatibilityWarning = verInfo.HasCompatibilityWarning;
+            status.VersionWarningMessage = verInfo.WarningMessage;
+
             string resourcesDir = Path.Combine(appDir, "resources");
             string appFolder = Path.Combine(resourcesDir, "app");
             string asarBak = Path.Combine(resourcesDir, "app.asar.bak");
@@ -378,7 +630,7 @@ public static class LauncherPatcherService
 
             byte[] jsonBytes = br.ReadBytes((int)jsonSize);
             string json = Encoding.UTF8.GetString(jsonBytes);
-            long basePayloadOffset = 16 + jsonSize;
+            long basePayloadOffset = 8 + headerSize;
 
             using var doc = JsonDocument.Parse(json);
             if (!doc.RootElement.TryGetProperty("files", out var filesElem))
@@ -390,6 +642,21 @@ public static class LauncherPatcherService
             Directory.CreateDirectory(outputDir);
             int count = 0;
             ExtractAsarNode(fs, basePayloadOffset, filesElem, outputDir, ref count);
+
+            string asarDir = Path.GetDirectoryName(asarPath) ?? string.Empty;
+            string asarName = Path.GetFileName(asarPath);
+            string unpackedDir = asarPath + ".unpacked";
+            if (!Directory.Exists(unpackedDir) && asarName.Equals("app.asar.bak", StringComparison.OrdinalIgnoreCase))
+            {
+                string altUnpacked = Path.Combine(asarDir, "app.asar.unpacked");
+                if (Directory.Exists(altUnpacked)) unpackedDir = altUnpacked;
+            }
+            if (Directory.Exists(unpackedDir))
+            {
+                CopyDirectory(unpackedDir, outputDir);
+                logs?.Add($"[ASAR] Интегрированы нативные модули из {Path.GetFileName(unpackedDir)} в {outputDir}");
+            }
+
             logs?.Add($"[ASAR] Распаковано файлов: {count:N0} из {Path.GetFileName(asarPath)} в {outputDir}");
             return true;
         }
@@ -496,7 +763,26 @@ public static class LauncherPatcherService
                 return result;
             }
 
-            logs.Add($"[APP] Версия приложения: {Path.GetFileName(appDir)}");
+            var verInfo = EvaluateLauncherVersion(appDir);
+            logs.Add($"[APP] Версия приложения: {Path.GetFileName(appDir)} (обнаружена версия: {verInfo.RawVersion})");
+
+            if (verInfo.IsVersionBlocked)
+            {
+                result.Success = false;
+                result.IsVersionBlocked = true;
+                result.Message = verInfo.WarningMessage;
+                logs.Add($"[ERROR] [VERSION_BLOCKED] {verInfo.WarningMessage}");
+                result.Status = GetStatus(launcherDir);
+                return result;
+            }
+
+            if (verInfo.HasCompatibilityWarning)
+            {
+                result.HasCompatibilityWarning = true;
+                result.VersionWarningMessage = verInfo.WarningMessage;
+                logs.Add($"[WARN] [COMPATIBILITY] {verInfo.WarningMessage}");
+            }
+
             string resourcesDir = Path.Combine(appDir, "resources");
             string appFolder = Path.Combine(resourcesDir, "app");
             string unpackedFolder = Path.Combine(resourcesDir, "unpacked");
@@ -537,6 +823,13 @@ public static class LauncherPatcherService
             else
             {
                 logs.Add($"[UNPACK] Рабочая папка resources/app уже готова.");
+            }
+
+            string asarUnpacked = Path.Combine(resourcesDir, "app.asar.unpacked");
+            if (Directory.Exists(asarUnpacked))
+            {
+                CopyDirectory(asarUnpacked, appFolder);
+                logs.Add($"[UNPACK] Синхронизированы нативные модули из app.asar.unpacked в resources/app");
             }
 
             try
@@ -601,9 +894,17 @@ public static class LauncherPatcherService
                 try
                 {
                     string pkgContent = File.ReadAllText(packageJsonPath, Encoding.UTF8);
-                    pkgContent = pkgContent.Replace("\"version\": \"1.2.46-SAPatcher\"", "\"version\": \"1.2.46\"");
+                    if (verInfo.IsV2OrHigher)
+                    {
+                        pkgContent = pkgContent.Replace("\"version\": \"2.0.0-SAPatcher\"", "\"version\": \"2.0.0\"");
+                        logs.Add($"[VERSION] Сохранена базовая совместимость с API сервера: 2.0.0");
+                    }
+                    else
+                    {
+                        pkgContent = pkgContent.Replace("\"version\": \"1.2.46-SAPatcher\"", "\"version\": \"1.2.46\"");
+                        logs.Add($"[VERSION] Сохранена базовая совместимость с API сервера: 1.2.46");
+                    }
                     File.WriteAllText(packageJsonPath, pkgContent, new UTF8Encoding(false));
-                    logs.Add($"[VERSION] Сохранена базовая совместимость с API сервера: 1.2.46");
                 }
                 catch (Exception ex)
                 {
@@ -615,86 +916,241 @@ public static class LauncherPatcherService
             if (File.Exists(mainJsPath))
             {
                 string content = File.ReadAllText(mainJsPath, Encoding.UTF8);
+                content = StripGuard(content);
 
-                if (content.Contains(GuardHeader))
+                if (verInfo.IsV2OrHigher)
                 {
-                    int startIdx = content.IndexOf(GuardHeader);
-                    int endIdx = content.IndexOf(GuardFooter);
-                    if (startIdx >= 0 && endIdx >= 0)
-                    {
-                        endIdx += GuardFooter.Length;
-                        content = content.Remove(startIdx, endIdx - startIdx).TrimStart();
-                    }
+                    // 2.0.0 Versioning
+                    content = content.Replace(
+                        "f.ipcMain.handle(\"getVersion\",()=>f.app.isPackaged?f.app.getVersion():\"DEV\")",
+                        "f.ipcMain.handle(\"getVersion\",()=>\"2.0.0-SAPatcher\")"
+                    );
+
+                    content = content.Replace(
+                        "{version:l.app.getVersion()}",
+                        "{version:\"2.0.0\"}"
+                    );
+
+                    // 2.0.0 Settings Lock
+                    content = content.Replace(
+                        "getGraphicsMode(){const e=this.store.get(\"graphicsMode\",\"standard\"),t=\"directX_high\"===e?\"directX_med\":e;return(0,h.isGraphicsMode)(t)?t:\"standard\"}",
+                        "getGraphicsMode(){return\"standard\"}"
+                    );
+                    content = content.Replace(
+                        "setGraphicsMode(e){this.store.set(\"graphicsMode\",e),this.store.set(\"real_skybox\",(0,h.isRealSkyboxEnabledForMode)(e))}",
+                        "setGraphicsMode(e){this.store.set(\"graphicsMode\",\"standard\"),this.store.set(\"real_skybox\",!1)}"
+                    );
+
+                    content = content.Replace(
+                        "getHighPerformanceEnabled(){return this.store.get(\"high_performance_enabled\",!1)}",
+                        "getHighPerformanceEnabled(){return!1}"
+                    );
+                    content = content.Replace(
+                        "setHighPerformanceEnabled(e){this.store.set(\"high_performance_enabled\",e)}",
+                        "setHighPerformanceEnabled(e){this.store.set(\"high_performance_enabled\",!1)}"
+                    );
+
+                    content = content.Replace(
+                        "getShouldClose(){return this.store.get(\"should_close\",!1)}",
+                        "getShouldClose(){return!1}"
+                    );
+                    content = content.Replace(
+                        "setShouldClose(e){this.store.set(\"should_close\",e)}",
+                        "setShouldClose(e){this.store.set(\"should_close\",!1)}"
+                    );
+                    content = content.Replace(
+                        "case\"shouldCloseOnJoin\":this.settingsStore.setShouldClose(e.value);break",
+                        "case\"shouldCloseOnJoin\":this.settingsStore.setShouldClose(!1);break"
+                    );
+                    content = content.Replace(
+                        "this.settingsStore.getShouldClose()&&this.main.hideWindow()",
+                        "!1&&this.main.hideWindow()"
+                    );
+                    content = content.Replace(
+                        "hideWindow(){this.window.hide()}",
+                        "hideWindow(){}"
+                    );
+                    content = content.Replace(
+                        "case\"graphicsMode\":if(this.operationManager.isBusy())",
+                        "case\"graphicsMode\":if(\"standard\"!==e.mode)return this.main.pushToast(\"Доступна только стандартная графика (SAPatcher)\",\"error\"),!1;if(this.operationManager.isBusy())"
+                    );
+
+                    content = content.Replace(
+                        "setDefaultGraphics(e){return s(this,void 0,void 0,(function*(){return!1}))}",
+                        "setDefaultGraphics(e){return Promise.resolve(!0)}"
+                    );
+                    content = content.Replace(
+                        "setMediumGraphics(e){return s(this,void 0,void 0,(function*(){return!1}))}",
+                        "setMediumGraphics(e){return Promise.resolve(!0)}"
+                    );
+                    content = content.Replace(
+                        "checkCurrentGraphics(e,t){return s(this,void 0,void 0,(function*(){return!1}))}",
+                        "checkCurrentGraphics(e,t){return Promise.resolve(!0)}"
+                    );
+
+                    content = content.Replace(
+                        "prepareForPlay(e){if(this.getIsPreparing())",
+                        "prepareForPlay(e){return Promise.resolve({status:\"ready\",renderer:\"native\",decisionCode:\"custom_disabled\"})};_orig_prepareForPlay(e){if(this.getIsPreparing())"
+                    );
+
+                    content = content.Replace(
+                        "recoverInstallation(e){return f(this,void 0,void 0,(function*(){try{if(this.user&&(0,A.isDevModeActive)",
+                        "recoverInstallation(e){return Promise.resolve({status:\"ready\"})};_orig_recoverInstallation(e){return f(this,void 0,void 0,(function*(){try{if(this.user&&(0,A.isDevModeActive)"
+                    );
+
+                    content = content.Replace(
+                        "repairInstalledFiles(e){return f(this,void 0,void 0,(function*(){try{return yield this.repair(e)}",
+                        "repairInstalledFiles(e){return Promise.resolve({status:\"ready\"})};_orig_repairInstalledFiles(e){return f(this,void 0,void 0,(function*(){try{return yield this.repair(e)}"
+                    );
+
+                    content = content.Replace(
+                        "apply(e,t){var i;return f(this,void 0,void 0,(function*(){let n=null,s=null;",
+                        "apply(e,t){return Promise.resolve({status:\"completed\",renderer:\"native\"})};_orig_apply(e,t){var i;return f(this,void 0,void 0,(function*(){let n=null,s=null;"
+                    );
+
+                    content = content.Replace(
+                        "acquirePackage(e,t){if(this.activeWork)return Promise.resolve({status:\"failed\"});",
+                        "acquirePackage(e,t){return Promise.resolve({status:\"completed\"})};_orig_acquirePackage(e,t){if(this.activeWork)return Promise.resolve({status:\"failed\"});"
+                    );
+
+                    content = content.Replace(
+                        "t.applyDxvkLatch=function(e,t){if(!(null==t?void 0:t.latched))return{manifest:e,allBlocked:!1};",
+                        "t.applyDxvkLatch=function(e,t){return{manifest:e,allBlocked:!1}};_orig_applyDxvkLatch=function(e,t){if(!(null==t?void 0:t.latched))return{manifest:e,allBlocked:!1};"
+                    );
+
+                    content = content.Replace(
+                        "t.isDxvkDllBlocked=function(e,t){if(!(null==e?void 0:e.latched))return!1;",
+                        "t.isDxvkDllBlocked=function(e,t){return!1};_orig_isDxvkDllBlocked=function(e,t){if(!(null==e?void 0:e.latched))return!1;"
+                    );
+
+                    content = content.Replace(
+                        "return this.ignoredRelativePaths.has(n)||e.endsWith(\".log\")",
+                        "return this.ignoredRelativePaths.has(n)||n.includes(\"d3d9.dll\")||n.includes(\"dxvk.conf\")||n.includes(\"d3d9.dis\")||n.includes(\"sapatcher\")||e.endsWith(\".log\")"
+                    );
+
+                    content = content.Replace(
+                        "!t.includes(\"fastload.asi\");",
+                        "!t.includes(\"sapatcher\")&&!t.endsWith(\".log\")&&!t.includes(\"dxvk.conf\")&&!t.includes(\"fastload.asi\");"
+                    );
+
+                    logs.Add($"[DXVK_CUT] Нативная подсистема DXVK 2.0.0 вырезана (скачивание, vkprobe32, d3d9smoke32 и блокировки нейтрализованы).");
+                }
+                else
+                {
+                    // 1.2.46 Versioning & Settings Lock
+                    content = content.Replace(
+                        "f.ipcMain.handle(\"getVersion\",()=>f.app.isPackaged?f.app.getVersion():\"DEV\")",
+                        "f.ipcMain.handle(\"getVersion\",()=>\"1.2.46-SAPatcher\")"
+                    );
+
+                    content = content.Replace(
+                        "{version:c.app.getVersion()}",
+                        "{version:\"1.2.46\"}"
+                    );
+
+                    content = content.Replace(
+                        "i&&(e.news=i),t&&e.servers.forEach(e=>{const i=t.find(t=>Number(t.serverId)===e.id);i&&(e.online=i.online)});",
+                        "i&&e&&(e.news=i),t&&e&&Array.isArray(e.servers)&&e.servers.forEach(e=>{const i=t.find(t=>Number(t.serverId)===e.id);i&&(e.online=i.online)});"
+                    );
+
+                    content = content.Replace(
+                        "getGraphicsMode(){const e=this.store.get(\"graphicsMode\",\"standard\"),t=\"directX_high\"===e?\"directX_med\":e;return(0,h.isGraphicsMode)(t)?t:\"standard\"}",
+                        "getGraphicsMode(){return\"standard\"}"
+                    );
+                    content = content.Replace(
+                        "setGraphicsMode(e){this.store.set(\"graphicsMode\",e),this.store.set(\"real_skybox\",(0,h.isRealSkyboxEnabledForMode)(e))}",
+                        "setGraphicsMode(e){this.store.set(\"graphicsMode\",\"standard\"),this.store.set(\"real_skybox\",!1)}"
+                    );
+
+                    content = content.Replace(
+                        "getHighPerformanceEnabled(){return this.store.get(\"high_performance_enabled\",!1)}",
+                        "getHighPerformanceEnabled(){return!1}"
+                    );
+                    content = content.Replace(
+                        "setHighPerformanceEnabled(e){this.store.set(\"high_performance_enabled\",e)}",
+                        "setHighPerformanceEnabled(e){this.store.set(\"high_performance_enabled\",!1)}"
+                    );
+
+                    content = content.Replace(
+                        "getShouldClose(){return this.store.get(\"should_close\",!1)}",
+                        "getShouldClose(){return!1}"
+                    );
+                    content = content.Replace(
+                        "setShouldClose(e){this.store.set(\"should_close\",e)}",
+                        "setShouldClose(e){this.store.set(\"should_close\",!1)}"
+                    );
+                    content = content.Replace(
+                        "case\"shouldCloseOnJoin\":this.settingsStore.setShouldClose(e.value);break",
+                        "case\"shouldCloseOnJoin\":this.settingsStore.setShouldClose(!1);break"
+                    );
+                    content = content.Replace(
+                        "this.settingsStore.getShouldClose()&&this.main.hideWindow()",
+                        "!1&&this.main.hideWindow()"
+                    );
+                    content = content.Replace(
+                        "hideWindow(){this.window.hide()}",
+                        "hideWindow(){}"
+                    );
+                    content = content.Replace(
+                        "case\"graphicsMode\":if(this.operationManager.isBusy())",
+                        "case\"graphicsMode\":if(\"standard\"!==e.mode)return this.main.pushToast(\"Доступна только стандартная графика (SAPatcher)\",\"error\"),!1;if(this.operationManager.isBusy())"
+                    );
+
+                    content = content.Replace(
+                        "setDefaultGraphics(e){return this.updateEnb(e,n.MEDIUM_GRAPHICS_ENB,n.DEFAULT_GRAPHICS_ENB)}",
+                        "setDefaultGraphics(e){return Promise.resolve(!0)}"
+                    );
+                    content = content.Replace(
+                        "setMediumGraphics(e){return this.updateEnb(e,n.DEFAULT_GRAPHICS_ENB,n.MEDIUM_GRAPHICS_ENB)}",
+                        "setMediumGraphics(e){return Promise.resolve(!0)}"
+                    );
+                    content = content.Replace(
+                        "checkCurrentGraphics(e,t){return s(this,void 0,void 0,(function*(){return t===d.Graphics.DEFAULT?!!(yield(0,c.pathExists)((0,l.join)(e,n.MEDIUM_GRAPHICS_ENB)))&&this.setDefaultGraphics(e):!!(yield(0,c.pathExists)((0,l.join)(e,n.DEFAULT_GRAPHICS_ENB)))&&this.setMediumGraphics(e)}))}",
+                        "checkCurrentGraphics(e,t){return Promise.resolve(!0)}"
+                    );
+
+                    content = content.Replace(
+                        "return this.ignoredRelativePaths.has(n)||e.endsWith(\".log\")",
+                        "return this.ignoredRelativePaths.has(n)||n.includes(\"d3d9.dll\")||n.includes(\"dxvk.conf\")||n.includes(\"d3d9.dis\")||n.includes(\"sapatcher\")||e.endsWith(\".log\")"
+                    );
+
+                    content = content.Replace(
+                        "let i=!t.includes(\"d3d9.dll\")&&!t.includes(\"fastload.asi\");",
+                        "let i=!t.includes(\"d3d9.dll\")&&!t.includes(\"dxvk.conf\")&&!t.includes(\"sapatcher\")&&!t.endsWith(\".log\")&&!t.includes(\"fastload.asi\");"
+                    );
+
+                    content = content.Replace(
+                        "toCachedServers(e){return e.map(e=>{var{host:t,port:i,password:n}=e;return s(e,[\"host\",\"port\",\"password\"])})}}",
+                        "toCachedServers(e){return e.map(e=>{var{password:n}=e;return Object.assign(s(e,[\"password\"]),{ip:e.host,host:e.host,port:e.port})})}}"
+                    );
+
+                    content = content.Replace(
+                        "getSelectedServerIndex(){return this.store.get(\"selected_server\",0)}",
+                        "getSelectedServerIndex(){const e=this.store.get(\"selected_server\",0);const t=this.liveServers&&this.liveServers.length>0?this.liveServers:(this.store.get(\"servers\",[])||[]);if(t.length===0)return 0;if(typeof e===\"number\"&&e>=0&&e<t.length)return e;const i=t.findIndex(t=>Number(t.id)===Number(e));return i!==-1?i:0}"
+                    );
+                    content = content.Replace(
+                        "setSelectedServer(e){this.store.set(\"selected_server\",e)}",
+                        "setSelectedServer(e){const t=this.liveServers&&this.liveServers.length>0?this.liveServers:(this.store.get(\"servers\",[])||[]);const i=t.findIndex(t=>Number(t.id)===Number(e));this.store.set(\"selected_server\",i!==-1?i:(Number(e)||0))}"
+                    );
+                    content = content.Replace(
+                        "getSelectedServer(){return this.getServers()[this.getSelectedServerIndex()]}",
+                        "getSelectedServer(){const e=this.getServers();return e[this.getSelectedServerIndex()]||e[0]||{game_directory_name:\"Motion Project\",server_hash:\"test\"}}"
+                    );
+                    content = content.Replace(
+                        "getSelectedLiveServer(){return this.liveServers[this.getSelectedServerIndex()]}",
+                        "getSelectedLiveServer(){return(this.liveServers&&this.liveServers[this.getSelectedServerIndex()])||(this.liveServers&&this.liveServers[0])}"
+                    );
                 }
 
-                content = content.Replace(
-                    "f.ipcMain.handle(\"getVersion\",()=>f.app.isPackaged?f.app.getVersion():\"DEV\")",
-                    "f.ipcMain.handle(\"getVersion\",()=>\"1.2.46-SAPatcher\")"
-                );
-
-                content = content.Replace(
-                    "{version:c.app.getVersion()}",
-                    "{version:\"1.2.46\"}"
-                );
-
-                content = content.Replace(
-                    "i&&(e.news=i),t&&e.servers.forEach(e=>{const i=t.find(t=>Number(t.serverId)===e.id);i&&(e.online=i.online)});",
-                    "i&&e&&(e.news=i),t&&e&&Array.isArray(e.servers)&&e.servers.forEach(e=>{const i=t.find(t=>Number(t.serverId)===e.id);i&&(e.online=i.online)});"
-                );
-
-                content = content.Replace(
-                    "getGraphicsMode(){const e=this.store.get(\"graphicsMode\",\"standard\"),t=\"directX_high\"===e?\"directX_med\":e;return(0,h.isGraphicsMode)(t)?t:\"standard\"}",
-                    "getGraphicsMode(){return\"standard\"}"
-                );
-                content = content.Replace(
-                    "setGraphicsMode(e){this.store.set(\"graphicsMode\",e),this.store.set(\"real_skybox\",(0,h.isRealSkyboxEnabledForMode)(e))}",
-                    "setGraphicsMode(e){this.store.set(\"graphicsMode\",\"standard\"),this.store.set(\"real_skybox\",!1)}"
-                );
-
-                content = content.Replace(
-                    "getHighPerformanceEnabled(){return this.store.get(\"high_performance_enabled\",!1)}",
-                    "getHighPerformanceEnabled(){return!1}"
-                );
-                content = content.Replace(
-                    "setHighPerformanceEnabled(e){this.store.set(\"high_performance_enabled\",e)}",
-                    "setHighPerformanceEnabled(e){this.store.set(\"high_performance_enabled\",!1)}"
-                );
-
-                content = content.Replace(
-                    "getShouldClose(){return this.store.get(\"should_close\",!1)}",
-                    "getShouldClose(){return!1}"
-                );
-                content = content.Replace(
-                    "setShouldClose(e){this.store.set(\"should_close\",e)}",
-                    "setShouldClose(e){this.store.set(\"should_close\",!1)}"
-                );
-
-                content = content.Replace(
-                    "setDefaultGraphics(e){return this.updateEnb(e,n.MEDIUM_GRAPHICS_ENB,n.DEFAULT_GRAPHICS_ENB)}",
-                    "setDefaultGraphics(e){return Promise.resolve(!0)}"
-                );
-                content = content.Replace(
-                    "setMediumGraphics(e){return this.updateEnb(e,n.DEFAULT_GRAPHICS_ENB,n.MEDIUM_GRAPHICS_ENB)}",
-                    "setMediumGraphics(e){return Promise.resolve(!0)}"
-                );
-                content = content.Replace(
-                    "checkCurrentGraphics(e,t){return s(this,void 0,void 0,(function*(){return t===d.Graphics.DEFAULT?!!(yield(0,c.pathExists)((0,l.join)(e,n.MEDIUM_GRAPHICS_ENB)))&&this.setDefaultGraphics(e):!!(yield(0,c.pathExists)((0,l.join)(e,n.DEFAULT_GRAPHICS_ENB)))&&this.setMediumGraphics(e)}))}",
-                    "checkCurrentGraphics(e,t){return Promise.resolve(!0)}"
-                );
-
-                content = content.Replace(
-                    "return this.ignoredRelativePaths.has(n)||e.endsWith(\".log\")",
-                    "return this.ignoredRelativePaths.has(n)||n.includes(\"d3d9.dll\")||n.includes(\"dxvk.conf\")||n.includes(\"d3d9.dis\")||n.includes(\"sapatcher\")||e.endsWith(\".log\")"
-                );
-
-                content = content.Replace(
-                    "let i=!t.includes(\"d3d9.dll\")&&!t.includes(\"fastload.asi\");",
-                    "let i=!t.includes(\"d3d9.dll\")&&!t.includes(\"dxvk.conf\")&&!t.includes(\"sapatcher\")&&!t.endsWith(\".log\")&&!t.includes(\"fastload.asi\");"
-                );
-
                 string guard = GuardScript;
-                string newContent = (!string.IsNullOrWhiteSpace(guard) ? guard + "\r\n" : "") + content;
+                string loggingHarness = SettingsManager.Current.EnableElectronLogging ? GetElectronLoggingScript() : string.Empty;
+                string newContent = (!string.IsNullOrWhiteSpace(loggingHarness) ? loggingHarness + "\r\n" : "") +
+                                    (!string.IsNullOrWhiteSpace(guard) ? guard + "\r\n" : "") + content;
                 File.WriteAllText(mainJsPath, newContent, new UTF8Encoding(false));
+                if (SettingsManager.Current.EnableElectronLogging)
+                {
+                    logs.Add($"[ELECTRON_LOG] Подробное логирование Electron активировано (запись в SAPatcher_Electron.log).");
+                }
                 if (Guard.GuardManager.IsProprietaryLoaded)
                 {
                     logs.Add($"[GUARD] Защитный модуль SAPatcher внедрён в dist/main.js!");
@@ -715,76 +1171,38 @@ public static class LauncherPatcherService
                 return result;
             }
 
-            string browserJsPath = Path.Combine(appFolder, "dist", "browser", "main.c7e6bda5696ee91ffd7a.js");
-            if (File.Exists(browserJsPath))
+            string dxvkConfInResources = Path.Combine(resourcesDir, "dxvk", "dxvk.conf");
+            if (File.Exists(dxvkConfInResources))
             {
                 try
                 {
-                    string bContent = File.ReadAllText(browserJsPath, Encoding.UTF8);
-
-                    const string origGraphics = "onGraphicsCardClick(t){this.highPerformanceEnabled&&\"standard\"!==t?this._toastService.push(\"error\",this.graphicsHighPerformanceError):t!==this.currentGraphicsMode?(this.expandedGraphicsCard=t,this.setGraphicsMode(t)):this.collapseGraphicsCard()}";
-                    const string newGraphics = "onGraphicsCardClick(t){if(t!==\"standard\"){try{this._toastService.push(\"error\",\"Доступна только стандартная графика (SAPatcher)\");}catch(e){}return;}this.expandedGraphicsCard=\"standard\";this.setGraphicsMode(\"standard\");}";
-                    bContent = bContent.Replace(origGraphics, newGraphics);
-
-                    const string origChecked = "onChecked(t){let e;switch(t){case\"shouldCloseOnJoin\":";
-                    const string newChecked = "onChecked(t){if(t!==\"wideScreenFix\"){return;}let e;switch(t){case\"shouldCloseOnJoin\":";
-                    bContent = bContent.Replace(origChecked, newChecked);
-
-                    bContent = bContent.Replace(
-                        "syncLocalStateWithService(){var t,e,n;if(!this._service.data)return;",
-                        "syncLocalStateWithService(){var t,e,n;if(!this._service.data)return;this.shouldCloseOnJoin=false;this.highPerformanceEnabled=false;this.isRunnableAsAdmin=false;this.isdevModeToggle=false;"
-                    );
-
-                    File.WriteAllText(browserJsPath, bContent, new UTF8Encoding(false));
-                    logs.Add($"[UI] Интерфейс настроек пропатчен: разблокирован только Широкоформатный режим.");
+                    File.WriteAllText(dxvkConfInResources, "# Neutralized by SAPatcher - DXVK managed by SAPatcher\r\n", new UTF8Encoding(false));
+                    logs.Add($"[DXVK_CONF] Конфигурация resources/dxvk/dxvk.conf очищена от d3d9.textureMemory = 64.");
                 }
-                catch (Exception ex)
-                {
-                    logs.Add($"[WARN] Патчинг browser bundle: {ex.Message}");
-                }
+                catch {}
             }
 
-            string browserHtmlPath = Path.Combine(appFolder, "dist", "browser", "index.html");
-            if (File.Exists(browserHtmlPath))
-            {
-                try
-                {
-                    string html = File.ReadAllText(browserHtmlPath, Encoding.UTF8);
-                    const string cssInjection = @"<style>
-.graphics-option:not(:first-child),
-.settings-options-column:nth-of-type(1) .settings-group-section-check:nth-of-type(2),
-.settings-options-column:nth-of-type(2) .settings-group-section-check:nth-of-type(1) {
-    opacity: 0.42 !important;
-    cursor: not-allowed !important;
-    pointer-events: none !important;
-    filter: grayscale(0.8) !important;
-}
-</style></head>";
-                    if (!html.Contains("settings-options-column:nth-of-type(1)"))
-                    {
-                        html = html.Replace("</head>", cssInjection);
-                        File.WriteAllText(browserHtmlPath, html, new UTF8Encoding(false));
-                        logs.Add($"[CSS] Визуальные стили блокировки неактивных опций внедрены в index.html.");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    logs.Add($"[WARN] CSS инъекция в index.html: {ex.Message}");
-                }
-            }
+            SetupAndApplyUiThemes(appFolder, SettingsManager.Current.MotionLauncherUiTheme, logs);
 
-            var manifest = GenerateIntegrityManifest(appFolder, resourcesDir);
+            var manifest = GenerateIntegrityManifest(appFolder, resourcesDir, verInfo.RawVersion);
             logs.Add($"[FINGERPRINT] Сформирован цифровой отпечаток целостности ({manifest.Files.Count} файлов, SHA-256).");
             logs.Add($"[SECURITY] Защита от модификаций активна (двуязычные уведомления RU/EN без утечки белого списка).");
             logs.Add($"[GAME_PROTECT] Защита каталога игры активна: безопасный запуск даже если игра ещё не установлена.");
 
-            CreateDiagnosticLogFiles(launcherDir, appDir);
+            CreateDiagnosticLogFiles(launcherDir, appDir, verInfo.RawVersion);
             logs.Add($"[LOG] Диагностические журналы обновлены:");
             logs.Add($"  -> {Path.Combine(launcherDir, "SAPatcher_Motion.log")}");
             logs.Add($"  -> {Path.Combine(launcherDir, "SAPatcher_Diagnostics.log")}");
 
             result.Success = true;
-            result.Message = "Motion Launcher успешно пропатчен: настройки зафиксированы, версия 1.2.46-SAPatcher, защита и проверка файлов активны!";
+            if (verInfo.HasCompatibilityWarning)
+            {
+                result.Message = $"Motion Launcher ({verInfo.RawVersion}) успешно пропатчен в режиме совместимости: нативный DXVK вырезан, настройки зафиксированы, защита активна!";
+            }
+            else
+            {
+                result.Message = $"Motion Launcher ({verInfo.RawVersion}) успешно пропатчен: нативный DXVK нейтрализован, настройки зафиксированы, версия {verInfo.RawVersion}-SAPatcher, защита и проверка файлов активны!";
+            }
             result.Status = GetStatus(launcherDir);
         }
         catch (Exception ex)
@@ -863,6 +1281,11 @@ public static class LauncherPatcherService
                 if (File.Exists(asarFile)) File.Delete(asarFile);
                 File.Move(asarBak, asarFile);
                 logs.Add($"[RESTORE] Восстановлен оригинальный пакет app.asar.");
+                if (Directory.Exists(appFolder))
+                {
+                    try { Directory.Delete(appFolder, true); } catch {}
+                    logs.Add($"[RESTORE] Рабочая директория resources/app удалена (активирован официальный app.asar).");
+                }
             }
 
             string manifestFile = Path.Combine(resourcesDir, "integrity.manifest.json");
@@ -888,9 +1311,12 @@ public static class LauncherPatcherService
         return result;
     }
 
-    public static IntegrityManifest GenerateIntegrityManifest(string appFolder, string resourcesDir)
+    public static IntegrityManifest GenerateIntegrityManifest(string appFolder, string resourcesDir, string detectedVer = "2.0.0")
     {
-        var manifest = new IntegrityManifest();
+        var manifest = new IntegrityManifest
+        {
+            Version = $"{detectedVer}-SAPatcher"
+        };
         if (!Directory.Exists(appFolder)) return manifest;
 
         using var sha256 = System.Security.Cryptography.SHA256.Create();
@@ -938,7 +1364,246 @@ public static class LauncherPatcherService
         return manifest;
     }
 
-    private static void CreateDiagnosticLogFiles(string launcherDir, string appDir)
+    public static (bool Success, string Message) SwitchLauncherUiTheme(string? targetDir, string theme)
+    {
+        var candidates = GetCandidateLauncherDirs();
+        if (!string.IsNullOrEmpty(targetDir))
+        {
+            string t = targetDir.Trim().Trim('"', '\'');
+            if (Directory.Exists(t) || File.Exists(t)) candidates.Insert(0, t);
+        }
+
+        foreach (var c in candidates)
+        {
+            var (launcherDir, appDir) = ResolveLauncherAndAppDir(c);
+            if (!string.IsNullOrEmpty(appDir))
+            {
+                string appFolder = Path.Combine(appDir, "resources", "app");
+                if (Directory.Exists(appFolder))
+                {
+                    return SetupAndApplyUiThemes(appFolder, theme);
+                }
+            }
+        }
+
+        return (false, "Рабочая директория resources/app лаунчера не найдена.");
+    }
+
+    public static (bool Success, string Message) SetupAndApplyUiThemes(string appFolder, string requestedTheme, List<string>? logs = null)
+    {
+        try
+        {
+            string distDir = Path.Combine(appFolder, "dist");
+            string browserDir = Path.Combine(distDir, "browser");
+            string browserV1 = Path.Combine(distDir, "browser_v1");
+            string browserV2 = Path.Combine(distDir, "browser_v2");
+            string browserMetro = Path.Combine(distDir, "browser_metro");
+            string browserSapatcher = Path.Combine(distDir, "browser_sapatcher");
+
+            if (!Directory.Exists(browserV2) && Directory.Exists(browserDir))
+            {
+                string v2Marker = Path.Combine(browserDir, "main.1ee933179b6e07ee7c53.js");
+                if (File.Exists(v2Marker) || !File.Exists(Path.Combine(browserDir, "styles.62465b4dbe8c685081f9.css")))
+                {
+                    CopyDirectory(browserDir, browserV2);
+                    logs?.Add("[THEME] Современный интерфейс v2.0.0 зафиксирован в dist/browser_v2");
+                }
+            }
+
+            if (!Directory.Exists(browserV1))
+            {
+                string[] v1Candidates = new[]
+                {
+                    @"C:\games\app-1.2.46 — копия\resources\app\dist\browser",
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "motion", "app-1.2.46", "resources", "app", "dist", "browser"),
+                    @"f:\project\SAPatcher\motion\app-1.2.46\resources\app\dist\browser",
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "motion-launcher", "app-1.2.46", "resources", "app", "dist", "browser")
+                };
+
+                string? foundV1 = v1Candidates.FirstOrDefault(Directory.Exists);
+                if (!string.IsNullOrEmpty(foundV1))
+                {
+                    CopyDirectory(foundV1, browserV1);
+                    logs?.Add($"[THEME] Классический интерфейс v1.2.46 успешно скопирован из {foundV1} в dist/browser_v1");
+                }
+                else
+                {
+                    logs?.Add("[WARN] Каталог классического интерфейса v1.2.46 не найден на диске.");
+                }
+            }
+
+            if (!Directory.Exists(browserMetro))
+            {
+                string[] metroCandidates = new[]
+                {
+                    @"f:\project\SAPatcher\themes\browser_metro",
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "themes", "browser_metro"),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "browser_metro")
+                };
+                string? foundMetro = metroCandidates.FirstOrDefault(Directory.Exists);
+                if (!string.IsNullOrEmpty(foundMetro))
+                {
+                    CopyDirectory(foundMetro, browserMetro);
+                    logs?.Add($"[THEME] Windows 8 Metro UI скопирован в dist/browser_metro");
+                }
+            }
+
+            if (!Directory.Exists(browserSapatcher))
+            {
+                string[] sapCandidates = new[]
+                {
+                    @"f:\project\SAPatcher\themes\browser_sapatcher",
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "themes", "browser_sapatcher"),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "browser_sapatcher")
+                };
+                string? foundSap = sapCandidates.FirstOrDefault(Directory.Exists);
+                if (!string.IsNullOrEmpty(foundSap))
+                {
+                    CopyDirectory(foundSap, browserSapatcher);
+                    logs?.Add($"[THEME] SAPatcher Cyber Glass UI скопирован в dist/browser_sapatcher");
+                }
+            }
+
+            if (Directory.Exists(browserV2))
+            {
+                PatchBrowserDirBundle(browserV2, "2.0.0", logs);
+            }
+            if (Directory.Exists(browserV1))
+            {
+                PatchBrowserDirBundle(browserV1, "1.2.46", logs);
+            }
+
+            string themeNorm = (requestedTheme ?? "v2").Trim().ToLowerInvariant() switch
+            {
+                "v1" => "v1",
+                "metro" => "metro",
+                "sapatcher" => "sapatcher",
+                _ => "v2"
+            };
+
+            string targetThemeDir = themeNorm switch
+            {
+                "v1" when Directory.Exists(browserV1) => browserV1,
+                "metro" when Directory.Exists(browserMetro) => browserMetro,
+                "sapatcher" when Directory.Exists(browserSapatcher) => browserSapatcher,
+                _ => Directory.Exists(browserV2) ? browserV2 : (Directory.Exists(browserMetro) ? browserMetro : browserDir)
+            };
+
+            string themeDisplayName = themeNorm switch
+            {
+                "v1" => "Классический (v1.2.46)",
+                "metro" => "Windows 8 Live Tiles (Metro UI)",
+                "sapatcher" => "SAPatcher Cyberpunk Glass Dark",
+                _ => "Современный (v2.0.0)"
+            };
+
+            if (Directory.Exists(targetThemeDir))
+            {
+                if (Directory.Exists(browserDir))
+                {
+                    try { Directory.Delete(browserDir, true); } catch {}
+                }
+                CopyDirectory(targetThemeDir, browserDir);
+
+                string uiThemeMarker = Path.Combine(appFolder, "ui_theme.txt");
+                File.WriteAllText(uiThemeMarker, themeNorm, new UTF8Encoding(false));
+                logs?.Add($"[THEME] Активный интерфейс лаунчера: {themeDisplayName}");
+                return (true, $"Интерфейс лаунчера успешно переключен на {themeDisplayName}");
+            }
+
+            return (false, "Не удалось найти директорию выбранной темы интерфейса.");
+        }
+        catch (Exception ex)
+        {
+            logs?.Add($"[THEME_ERROR] {ex.Message}");
+            return (false, $"Ошибка переключения темы: {ex.Message}");
+        }
+    }
+
+    private static void PatchBrowserDirBundle(string targetBrowserDir, string version, List<string>? logs)
+    {
+        if (!Directory.Exists(targetBrowserDir)) return;
+        var jsFiles = Directory.GetFiles(targetBrowserDir, "main.*.js", SearchOption.TopDirectoryOnly);
+        foreach (var jsPath in jsFiles)
+        {
+            try
+            {
+                string bContent = File.ReadAllText(jsPath, Encoding.UTF8);
+
+                const string origGraphics1 = "onGraphicsCardClick(t){this.highPerformanceEnabled&&\"standard\"!==t?this._toastService.push(\"error\",this.graphicsHighPerformanceError):t!==this.currentGraphicsMode?(this.expandedGraphicsCard=t,this.setGraphicsMode(t)):this.collapseGraphicsCard()}";
+                const string origGraphics2 = "onGraphicsCardClick(t){this.graphicsSavePending||(t!==this.currentGraphicsMode?(this.expandedGraphicsCard=t,this.setGraphicsMode(t)):this.collapseGraphicsCard())}";
+                const string newGraphics = "onGraphicsCardClick(t){if(t!==\"standard\"){try{if(this.toastService)this.toastService.push(\"error\",\"Доступна только стандартная графика (SAPatcher)\");else if(this._toastService)this._toastService.push(\"error\",\"Доступна только стандартная графика (SAPatcher)\");}catch(e){}return;}this.expandedGraphicsCard=\"standard\";this.setGraphicsMode(\"standard\");}";
+
+                bContent = bContent.Replace(origGraphics1, newGraphics);
+                bContent = bContent.Replace(origGraphics2, newGraphics);
+
+                if (bContent.Contains("confirmGraphicsMode(t){"))
+                {
+                    bContent = bContent.Replace(
+                        "confirmGraphicsMode(t){this.onGraphicsCardClick(t)",
+                        "confirmGraphicsMode(t){if(t!==\"standard\"){try{if(this.toastService)this.toastService.push(\"error\",\"Доступна только стандартная графика (SAPatcher)\");else if(this._toastService)this._toastService.push(\"error\",\"Доступна только стандартная графика (SAPatcher)\");}catch(e){}return;}this.onGraphicsCardClick(t)"
+                    );
+                }
+
+                if (bContent.Contains("saveGraphicsMode(){"))
+                {
+                    bContent = bContent.Replace(
+                        "saveGraphicsMode(){if(this.highPerformanceEnabled&&\"standard\"!==this.graphicsMode)return this._toastService.push(\"error\",this.graphicsHighPerformanceError);",
+                        "saveGraphicsMode(){if(this.graphicsMode!==\"standard\"){try{this._toastService.push(\"error\",\"Доступна только стандартная графика (SAPatcher)\");}catch(e){}return;}"
+                    );
+                    bContent = bContent.Replace(
+                        "saveGraphicsMode(){if(this.highPerformanceEnabled",
+                        "saveGraphicsMode(){if(this.graphicsMode!==\"standard\"){try{this._toastService.push(\"error\",\"Доступна только стандартная графика (SAPatcher)\");}catch(e){}return;}if(this.highPerformanceEnabled"
+                    );
+                }
+
+                const string origChecked = "onChecked(t){let e;switch(t){case\"shouldCloseOnJoin\":";
+                const string newChecked = "onChecked(t){if(t!==\"wideScreenFix\"){try{if(this.toastService)this.toastService.push(\"info\",\"Параметр заблокирован: лаунчер всегда остаётся открытым\");else if(this._toastService)this._toastService.push(\"info\",\"Параметр заблокирован: лаунчер всегда остаётся открытым\");}catch(e){}return;}let e;switch(t){case\"shouldCloseOnJoin\":";
+                bContent = bContent.Replace(origChecked, newChecked);
+
+                bContent = bContent.Replace(
+                    "syncLocalStateWithService(){var t,e,n;if(!this._service.data)return;",
+                    "syncLocalStateWithService(){var t,e,n;if(!this._service.data)return;this.shouldCloseOnJoin=false;this.highPerformanceEnabled=false;this.isRunnableAsAdmin=false;this.isdevModeToggle=false;"
+                );
+
+                File.WriteAllText(jsPath, bContent, new UTF8Encoding(false));
+                logs?.Add($"[UI] Пакет интерфейса {version} ({Path.GetFileName(jsPath)}) защищён (только стандартная графика, запрет сворачивания).");
+            }
+            catch (Exception ex)
+            {
+                logs?.Add($"[WARN] Ошибка патчинга {Path.GetFileName(jsPath)}: {ex.Message}");
+            }
+        }
+
+        string htmlPath = Path.Combine(targetBrowserDir, "index.html");
+        if (File.Exists(htmlPath))
+        {
+            try
+            {
+                string html = File.ReadAllText(htmlPath, Encoding.UTF8);
+                const string css = @"<style>
+.graphics-option:not(:first-child),
+article.graphics-card:not(:first-child),
+section div article:not(:first-child) button,
+.settings-options-column:nth-of-type(1) .settings-group-section-check:nth-of-type(2),
+.settings-options-column:nth-of-type(2) .settings-group-section-check:nth-of-type(1) {
+    opacity: 0.42 !important;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
+    filter: grayscale(0.8) !important;
+}
+</style></head>";
+                if (!html.Contains("settings-options-column:nth-of-type(1)"))
+                {
+                    html = html.Replace("</head>", css);
+                    File.WriteAllText(htmlPath, html, new UTF8Encoding(false));
+                }
+            }
+            catch {}
+        }
+    }
+
+    private static void CreateDiagnosticLogFiles(string launcherDir, string appDir, string detectedVer = "2.0.0")
     {
         try
         {
@@ -946,14 +1611,14 @@ public static class LauncherPatcherService
             string motionLog = Path.Combine(launcherDir, "SAPatcher_Motion.log");
             string diagLog = Path.Combine(launcherDir, "SAPatcher_Diagnostics.log");
 
-            string initialLog = $"[{now}] SAPatcher Guard -> PATCH INSTALLED | Status: PROTECTED | Version: 1.2.46-SAPatcher | Target: {appDir}\r\n";
+            string initialLog = $"[{now}] SAPatcher Guard -> PATCH INSTALLED | Status: PROTECTED | Version: {detectedVer}-SAPatcher | Target: {appDir}\r\n";
             File.AppendAllText(motionLog, initialLog, Encoding.UTF8);
 
             string diagContent = $@"================================================================================
                   SAPATCHER RUNTIME SECURITY & DIAGNOSTICS LOG
 ================================================================================
 Created:          {now}
-Launcher:         Motion Project Launcher (app-1.2.46-SAPatcher)
+Launcher:         Motion Project Launcher (app-{detectedVer}-SAPatcher)
 Launcher Path:    {Path.Combine(launcherDir, "Motion Launcher.exe")}
 App Directory:    {appDir}
 Daemon Port:      49742
@@ -963,6 +1628,7 @@ Backup Archive:   {Path.Combine(launcherDir, "Motion_Launcher_Original_Backup.zi
 Locked Graphics:  Standard Graphics (Low) Enforced
 Allowed Switches: Widescreen Fix (Enabled/User controllable)
 Locked Switches:  High Performance (OFF), Auto-close Launcher (OFF)
+DXVK Subsystem:   Native DXVK neutralized & sanitized (no buggy downloads/latching/textureMemory=64)
 File Check:       Full DXVK Harmony (d3d9.dll / dxvk.conf protected from deletion/overwriting)
 Game Protection:  Game directory guarded against foreign injector executables
 ================================================================================
@@ -1275,6 +1941,14 @@ Game Protection:  Game directory guarded against foreign injector executables
         result.LaaSampEnabled = CheckLaa(sampExe);
         result.LaaEnabled = result.LaaMotionEnabled && result.LaaSampEnabled;
 
+        if (SAPatcher.Guard.GuardManager.IsDeveloperModeActive)
+        {
+            result.Clean = true;
+            result.D3D9MatchesKnownDxvk = true;
+            result.Message = "Режим разработчика активен: проверки целостности игры отключены для авторизованного оборудования (MPG B550 GAMING PLUS).";
+            return result;
+        }
+
         string d3d9File = Path.Combine(gameDir, "d3d9.dll");
         result.D3D9Exists = File.Exists(d3d9File);
         if (result.D3D9Exists)
@@ -1287,7 +1961,10 @@ Game Protection:  Game directory guarded against foreign injector executables
                 [3305486] = "DXVK 1.10.3 (32-bit)",
                 [3858446] = "DXVK 2.3 (32-bit)",
                 [7786510] = "DXVK 3.0 (32-bit)",
-                [7856142] = "DXVK 3.1.1 (32-bit)"
+                [7856142] = "DXVK 3.1.1 (32-bit)",
+                [7868416] = "DXVK 3.1.1 (32-bit)",
+                [7884800] = "DXVK 3.1.1 (32-bit)",
+                [7864320] = "DXVK 3.1.1 (32-bit)"
             };
 
             if (dxvkMap.TryGetValue(fi.Length, out var detectedVer))
@@ -1467,7 +2144,10 @@ Game Protection:  Game directory guarded against foreign injector executables
         3305486,
         3858446,
         7786510,
-        7856142
+        7856142,
+        7868416,
+        7884800,
+        7864320
     };
 
     public static readonly string[] ForbiddenDirs = new[]
@@ -1491,6 +2171,11 @@ Game Protection:  Game directory guarded against foreign injector executables
     public static bool ValidateGameFolderForAntiCheat(string gameDir, out List<string> violations)
     {
         violations = new List<string>();
+        if (SAPatcher.Guard.GuardManager.IsDeveloperModeActive)
+        {
+            return true;
+        }
+
         if (!Directory.Exists(gameDir))
         {
             violations.Add($"Папка игры не найдена: {gameDir}");
@@ -1652,6 +2337,42 @@ Game Protection:  Game directory guarded against foreign injector executables
     {
         archivePathFound = string.Empty;
         logMessage = string.Empty;
+
+        if (string.Equals(version, "SAPatcher-DXVK 1", StringComparison.OrdinalIgnoreCase) ||
+            version.Contains("SAPatcher-DXVK", StringComparison.OrdinalIgnoreCase) ||
+            version.Contains("fork", StringComparison.OrdinalIgnoreCase))
+        {
+            string[] forkCandidates = new[]
+            {
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "d3d9.dll"),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SAPatch-DXVK", "build_x86", "src", "d3d9", "d3d9.dll"),
+                Path.Combine(Directory.GetCurrentDirectory(), "d3d9.dll"),
+                Path.Combine(Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..")), "d3d9.dll"),
+                @"f:\project\SAPatcher\d3d9.dll",
+                @"f:\project\SAPatcher\SAPatch-DXVK\build_x86\src\d3d9\d3d9.dll"
+            };
+
+            foreach (var cand in forkCandidates)
+            {
+                if (File.Exists(cand))
+                {
+                    try
+                    {
+                        byte[] bytes = File.ReadAllBytes(cand);
+                        archivePathFound = cand;
+                        logMessage = $"Использована встроенная библиотека DXVK 3.1.1 ({bytes.Length:N0} байт)";
+                        return bytes;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[DxvkExtract] Ошибка чтения {cand}: {ex.Message}");
+                    }
+                }
+            }
+
+            logMessage = "Файл d3d9.dll для DXVK 3.1.1 не найден в каталоге проекта.";
+            return null;
+        }
 
         string archiveName = $"dxvk-{version}.tar.gz";
         string[] candidateDirs = new[]
@@ -1886,4 +2607,178 @@ Game Protection:  Game directory guarded against foreign injector executables
         logs.Add($"[4GB_PATCH] Успешно обработано исполняемых файлов: {patchedCount}. Патч 4 ГБ ОЗУ внедрён и активен!");
         return true;
     }
+
+    public static ExeLaaInspection InspectExeLAA(string filePath)
+    {
+        var res = new ExeLaaInspection { FilePath = filePath ?? string.Empty };
+        if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+        {
+            res.Exists = false;
+            res.Message = "Файл не существует или путь не указан.";
+            return res;
+        }
+
+        try
+        {
+            var fi = new FileInfo(filePath);
+            res.Exists = true;
+            res.FileName = fi.Name;
+            res.FileSizeBytes = fi.Length;
+            res.FileSizeFormatted = FormatBytes(fi.Length);
+
+            string backupPath = filePath + ".Backup";
+            if (File.Exists(backupPath))
+            {
+                var bfi = new FileInfo(backupPath);
+                res.BackupExists = true;
+                res.BackupPath = backupPath;
+                res.BackupSizeBytes = bfi.Length;
+                res.BackupSizeFormatted = FormatBytes(bfi.Length);
+            }
+
+            using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var reader = new BinaryReader(fs))
+            {
+                if (fs.Length < 0x40)
+                {
+                    res.Message = "Файл слишком мал для PE-исполняемого файла.";
+                    return res;
+                }
+
+                ushort mz = reader.ReadUInt16();
+                if (mz != 0x5A4D)
+                {
+                    res.Message = "Файл не является валидным DOS/Windows исполняемым файлом (отсутствует MZ).";
+                    return res;
+                }
+
+                fs.Seek(0x3C, SeekOrigin.Begin);
+                int peOffset = reader.ReadInt32();
+                res.PeOffset = peOffset;
+
+                if (peOffset <= 0 || peOffset + 24 > fs.Length)
+                {
+                    res.Message = "Некорректное смещение заголовка PE.";
+                    return res;
+                }
+
+                fs.Seek(peOffset, SeekOrigin.Begin);
+                uint peSig = reader.ReadUInt32();
+                if (peSig != 0x00004550)
+                {
+                    res.Message = "Отсутствует сигнатура PE (NT Header).";
+                    return res;
+                }
+
+                fs.Seek(peOffset + 22, SeekOrigin.Begin);
+                ushort characteristics = reader.ReadUInt16();
+                res.Characteristics = characteristics;
+
+                const ushort IMAGE_FILE_LARGE_ADDRESS_AWARE = 0x0020;
+                res.IsLaaActive = (characteristics & IMAGE_FILE_LARGE_ADDRESS_AWARE) != 0;
+
+                if (peOffset + 92 <= fs.Length)
+                {
+                    fs.Seek(peOffset + 88, SeekOrigin.Begin);
+                    res.Checksum = reader.ReadUInt32();
+                }
+
+                res.Message = res.IsLaaActive
+                    ? "Флаг LAA (IMAGE_FILE_LARGE_ADDRESS_AWARE) активен. Доступно до 4 ГБ памяти."
+                    : "Флаг LAA не активен. Приложение ограничено 2 ГБ памяти.";
+            }
+        }
+        catch (Exception ex)
+        {
+            res.Message = $"Ошибка анализа PE-заголовка: {ex.Message}";
+        }
+
+        return res;
+    }
+
+    public static bool RestoreExeBackup(string filePath, out string msg)
+    {
+        if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+        {
+            msg = "Целевой исполняемый файл не найден.";
+            return false;
+        }
+
+        string backupPath = filePath + ".Backup";
+        if (!File.Exists(backupPath))
+        {
+            msg = $"Резервная копия не найдена: {backupPath}";
+            return false;
+        }
+
+        try
+        {
+            File.Copy(backupPath, filePath, true);
+            msg = $"Исполняемый файл успешно восстановлен из резервной копии ({Path.GetFileName(backupPath)}).";
+            return true;
+        }
+        catch (Exception ex)
+        {
+            msg = $"Ошибка восстановления из бэкапа: {ex.Message}";
+            return false;
+        }
+    }
+
+    public static string FormatBytes(long bytes)
+    {
+        string[] suffixes = { "B", "KB", "MB", "GB" };
+        int i = 0;
+        double d = bytes;
+        while (d >= 1024 && i < suffixes.Length - 1)
+        {
+            d /= 1024;
+            i++;
+        }
+        return $"{d:0.##} {suffixes[i]}";
+    }
+}
+
+public class ExeLaaInspection
+{
+    [JsonPropertyName("exists")]
+    public bool Exists { get; set; }
+
+    [JsonPropertyName("filePath")]
+    public string FilePath { get; set; } = string.Empty;
+
+    [JsonPropertyName("fileName")]
+    public string FileName { get; set; } = string.Empty;
+
+    [JsonPropertyName("fileSizeBytes")]
+    public long FileSizeBytes { get; set; }
+
+    [JsonPropertyName("fileSizeFormatted")]
+    public string FileSizeFormatted { get; set; } = string.Empty;
+
+    [JsonPropertyName("isLaaActive")]
+    public bool IsLaaActive { get; set; }
+
+    [JsonPropertyName("peOffset")]
+    public int PeOffset { get; set; }
+
+    [JsonPropertyName("characteristics")]
+    public ushort Characteristics { get; set; }
+
+    [JsonPropertyName("checksum")]
+    public uint Checksum { get; set; }
+
+    [JsonPropertyName("backupExists")]
+    public bool BackupExists { get; set; }
+
+    [JsonPropertyName("backupPath")]
+    public string BackupPath { get; set; } = string.Empty;
+
+    [JsonPropertyName("backupSizeBytes")]
+    public long BackupSizeBytes { get; set; }
+
+    [JsonPropertyName("backupSizeFormatted")]
+    public string BackupSizeFormatted { get; set; } = string.Empty;
+
+    [JsonPropertyName("message")]
+    public string Message { get; set; } = string.Empty;
 }

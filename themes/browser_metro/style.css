@@ -1,0 +1,785 @@
+/* Windows 8 Metro UI — Fully Fixed Pixel-Perfect CSS */
+:root {
+  --metro-bg: #0b0e14;
+  --metro-surface: #141923;
+  --metro-cobalt: #0078D7;
+  --metro-cobalt-dark: #005A9E;
+  --metro-teal: #008272;
+  --metro-emerald: #107C10;
+  --metro-crimson: #D81B26;
+  --metro-orange: #D83B01;
+  --metro-purple: #6B38FB;
+  --metro-indigo: #4B0082;
+  --metro-blue: #00A4EF;
+  --metro-slate: #1A212E;
+  --metro-vk: #0077FF;
+  --metro-tg: #2AABEE;
+  --metro-ds: #5865F2;
+  --metro-site: #107C10;
+  --metro-text: #FFFFFF;
+  --metro-text-muted: rgba(255, 255, 255, 0.7);
+  --metro-border: rgba(255, 255, 255, 0.12);
+  --font-metro: 'Segoe UI', 'Ubuntu', 'Rubik', -apple-system, sans-serif;
+  --font-mono: 'Consolas', 'Courier New', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+body.metro-body {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--metro-bg);
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(0, 120, 215, 0.18) 0%, transparent 45%),
+    radial-gradient(circle at 90% 80%, rgba(107, 56, 251, 0.16) 0%, transparent 45%),
+    linear-gradient(135deg, #07090D 0%, #111722 100%);
+  color: var(--metro-text);
+  font-family: var(--font-metro);
+  font-size: 13px;
+}
+
+.metro-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+/* TOPBAR */
+.metro-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 52px;
+  padding: 0 24px;
+  -webkit-app-region: drag;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(11, 14, 20, 0.88);
+  backdrop-filter: blur(16px);
+  z-index: 50;
+  flex-shrink: 0;
+}
+
+.metro-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+}
+
+.metro-start-title {
+  font-size: 28px;
+  font-weight: 300;
+  letter-spacing: -0.5px;
+  color: #FFFFFF;
+}
+
+.metro-subbrand {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--metro-text-muted);
+}
+
+.metro-tag {
+  background: var(--metro-cobalt);
+  color: #FFF;
+  font-size: 9px;
+  padding: 2px 5px;
+  margin-left: 4px;
+  border-radius: 2px;
+  font-weight: 700;
+}
+
+.metro-user-deck {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  -webkit-app-region: no-drag;
+}
+
+.metro-user-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 3px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.metro-avatar {
+  width: 28px;
+  height: 28px;
+  background: var(--metro-purple);
+  color: #FFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.metro-user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.metro-user-name {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.metro-user-status {
+  font-size: 10px;
+  color: #00E5FF;
+  line-height: 1.2;
+}
+
+.metro-window-controls {
+  display: flex;
+  align-items: center;
+}
+
+.metro-btn-window {
+  width: 34px;
+  height: 34px;
+  background: transparent;
+  border: none;
+  color: var(--metro-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.metro-btn-window:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #FFF;
+}
+
+.metro-btn-window.btn-close:hover {
+  background: var(--metro-crimson);
+  color: #FFF;
+}
+
+/* PANORAMA */
+.metro-panorama {
+  flex: 1;
+  display: flex;
+  gap: 32px;
+  padding: 16px 28px 12px 28px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  height: calc(100vh - 90px);
+}
+
+.metro-panorama::-webkit-scrollbar {
+  height: 6px;
+}
+
+.metro-panorama::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 3px;
+}
+
+.metro-group {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.metro-group-title {
+  font-size: 13px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--metro-text-muted);
+  margin-bottom: 10px;
+}
+
+/* GRIDS */
+.metro-grid {
+  display: grid;
+  grid-template-rows: repeat(3, 154px);
+  grid-auto-flow: column;
+  gap: 10px;
+}
+
+/* Section Specific column definitions */
+.grid-section-launch {
+  grid-template-columns: 318px 240px;
+}
+
+.grid-section-profile {
+  grid-template-columns: 318px;
+}
+
+.grid-section-settings {
+  grid-template-columns: 154px 154px;
+}
+
+.grid-section-social {
+  grid-template-columns: 140px 140px;
+}
+
+/* TILES */
+.metro-tile {
+  position: relative;
+  background-color: var(--metro-surface);
+  color: #FFF;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  outline: 2px solid transparent;
+  transition: transform 0.12s cubic-bezier(0.1, 0.9, 0.2, 1), outline 0.15s ease, filter 0.15s ease;
+  overflow: hidden;
+  border-radius: 1px;
+}
+
+.metro-tile:hover {
+  outline: 2px solid rgba(255, 255, 255, 0.7);
+  filter: brightness(1.08);
+  transform: perspective(600px) scale(0.985);
+}
+
+.metro-tile:active {
+  transform: perspective(600px) scale(0.96);
+}
+
+/* Tile Sizes */
+.tile-square {
+  width: 100%;
+  height: 154px;
+}
+
+.tile-wide {
+  grid-column: span 1;
+  height: 154px;
+}
+
+.tile-big {
+  grid-column: span 1;
+  grid-row: span 2;
+  height: 318px;
+}
+
+/* Colors */
+.tile-cobalt { background-color: var(--metro-cobalt); }
+.tile-teal { background-color: var(--metro-teal); }
+.tile-emerald { background-color: var(--metro-emerald); }
+.tile-crimson { background-color: var(--metro-crimson); }
+.tile-orange { background-color: var(--metro-orange); }
+.tile-purple { background-color: var(--metro-purple); }
+.tile-indigo { background-color: var(--metro-indigo); }
+.tile-blue { background-color: var(--metro-blue); }
+.tile-slate { background-color: var(--metro-slate); border: 1px solid rgba(255, 255, 255, 0.08); }
+.tile-vk { background-color: var(--metro-vk); }
+.tile-telegram { background-color: var(--metro-tg); }
+.tile-discord { background-color: var(--metro-ds); }
+.tile-site { background-color: var(--metro-site); }
+
+/* HERO BIG LAUNCH TILE (2x2) */
+.hero-tile {
+  background: linear-gradient(135deg, #005A9E 0%, #0078D7 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px;
+}
+
+.tile-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.live-status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #00FF66;
+}
+
+.live-dot.pulse {
+  box-shadow: 0 0 8px #00FF66;
+}
+
+.live-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.tile-ip-badge {
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 3px 8px;
+  border-radius: 2px;
+  color: #00E5FF;
+  border: 1px solid rgba(0, 229, 255, 0.3);
+}
+
+.hero-center-info {
+  margin: 10px 0;
+}
+
+.hero-server-name {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 6px;
+}
+
+.hero-stats {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.stat-number {
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.85);
+  letter-spacing: 0.5px;
+}
+
+.hero-bottom-action {
+  margin-top: auto;
+}
+
+.metro-action-btn {
+  width: 100%;
+  height: 48px;
+  background: #FFFFFF;
+  color: #005A9E;
+  border: none;
+  font-family: var(--font-metro);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.metro-action-btn:hover {
+  background: #EDEDED;
+  transform: translateY(-1px);
+}
+
+.metro-action-btn:active {
+  transform: translateY(1px);
+}
+
+.metro-action-btn.btn-pause {
+  background: var(--metro-orange);
+  color: #FFF;
+}
+
+.metro-action-btn.btn-disabled {
+  background: rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.8);
+  cursor: not-allowed;
+}
+
+/* PROGRESS TILE (2x1) */
+.tile-content-fill {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+}
+
+.progress-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.metro-progress-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  margin: 10px 0 8px 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.metro-progress-fill {
+  height: 100%;
+  background: #FFFFFF;
+  transition: width 0.3s ease;
+}
+
+.progress-bottom {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.tile-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-top: 6px;
+}
+
+.metro-inline-btn {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #FFF;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.metro-inline-btn:hover {
+  background: #FFF;
+  color: #000;
+}
+
+/* DYNAMIC SERVER TILES SLOT */
+.metro-dynamic-servers-slot {
+  grid-row: span 3;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.server-metro-card {
+  height: 154px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.server-metro-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.server-metro-card.selected {
+  border-color: #00E5FF;
+  background: rgba(0, 120, 215, 0.25);
+}
+
+.server-metro-card.selected::after {
+  content: '✓';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #00E5FF;
+}
+
+.smc-name {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.smc-ip {
+  font-size: 11px;
+  color: #00E5FF;
+}
+
+.smc-stats {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+/* NICKNAME TILE */
+.tile-header-mini {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tile-mini-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.metro-input-group {
+  display: flex;
+  gap: 6px;
+  margin: 10px 0 6px 0;
+}
+
+.metro-input {
+  flex: 1;
+  height: 36px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #FFF;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 0 10px;
+  outline: none;
+}
+
+.metro-input:focus {
+  border-color: #FFF;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.metro-submit-btn {
+  width: 36px;
+  height: 36px;
+  background: #FFF;
+  color: var(--metro-purple);
+  border: none;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.metro-submit-btn:hover {
+  background: #EDEDED;
+}
+
+.tile-caption {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.tile-caption-bold {
+  font-size: 12px;
+  font-weight: 700;
+  display: block;
+}
+
+.tile-caption-sub {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  display: block;
+}
+
+/* GAME DIR TILE */
+.game-path-display {
+  font-size: 11px;
+  color: #FFF;
+  word-break: break-all;
+  display: block;
+  margin: 8px 0;
+  max-height: 32px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.path-btn-row {
+  display: flex;
+  gap: 8px;
+}
+
+.metro-path-btn {
+  flex: 1;
+  height: 32px;
+  background: #FFF;
+  color: var(--metro-orange);
+  border: none;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.metro-path-btn.btn-ghost {
+  background: transparent;
+  color: #FFF;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.metro-path-btn.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* SQUARE TILES (1x1) */
+.tile-center-icon {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.9;
+}
+
+.tile-center-text {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.tile-toggle-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.toggle-icon {
+  font-size: 20px;
+}
+
+.toggle-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.toggle-tile.active .toggle-badge {
+  background: #FFF;
+  color: #000;
+}
+
+.shield-mini-badge {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 5px;
+  background: rgba(0, 229, 255, 0.15);
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  color: #00E5FF;
+}
+
+/* APPBAR FOOTER */
+.metro-appbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 38px;
+  padding: 0 24px;
+  background: rgba(10, 13, 18, 0.96);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+  z-index: 50;
+}
+
+.metro-appbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.metro-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.metro-badge.badge-shield {
+  background: rgba(0, 229, 255, 0.12);
+  border-color: rgba(0, 229, 255, 0.35);
+  color: #00E5FF;
+}
+
+.metro-status-text {
+  font-size: 11px;
+  color: var(--metro-text-muted);
+}
+
+.metro-appbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: var(--metro-text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.metro-appbar-btn:hover {
+  color: #FFF;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* TOASTS */
+.metro-toast-container {
+  position: absolute;
+  top: 60px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.metro-toast {
+  background: #181E2A;
+  border-left: 4px solid var(--metro-cobalt);
+  color: #FFF;
+  padding: 10px 16px;
+  font-size: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: slideInRight 0.2s cubic-bezier(0.1, 0.9, 0.2, 1);
+  pointer-events: auto;
+}
+
+.metro-toast.toast-error { border-left-color: var(--metro-crimson); }
+.metro-toast.toast-success { border-left-color: var(--metro-emerald); }
+.metro-toast.toast-info { border-left-color: var(--metro-blue); }
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.font-mono { font-family: var(--font-mono); }
+.text-cyan { color: #00E5FF; }
+.text-green { color: #00FF66; }
+.text-xs { font-size: 10px; color: rgba(255, 255, 255, 0.6); }
+.font-bold { font-weight: 700; }

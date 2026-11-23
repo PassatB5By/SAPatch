@@ -2,16 +2,20 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net9.0-windows</TargetFramework>
+    <TargetFramework>net9.0-windows10.0.19041.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationTitle>SAPatcher</ApplicationTitle>
     <AssemblyName>SAPatcher</AssemblyName>
     <RootNamespace>SAPatcher</RootNamespace>
     <UseWindowsForms>true</UseWindowsForms>
+    <Version>2.0.0</Version>
+    <AssemblyVersion>2.0.0.0</AssemblyVersion>
+    <FileVersion>2.0.0.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
     <PackageReference Include="Photino.NET" Version="4.0.16" />
     <PackageReference Include="System.Management" Version="9.0.2" />
   </ItemGroup>
@@ -20,6 +24,9 @@
     <Compile Remove="SecuritySource\**" />
     <EmbeddedResource Remove="SecuritySource\**" />
     <None Remove="SecuritySource\**" />
+    <Compile Remove="SAPatch-DXVK\**" />
+    <EmbeddedResource Remove="SAPatch-DXVK\**" />
+    <None Remove="SAPatch-DXVK\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -28,5 +35,13 @@
     </Content>
     <None Include="*.tar.gz" CopyToOutputDirectory="PreserveNewest" />
     <None Include="4gb_patch.exe" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="d3d9.dll" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="SAPatcher.Security.dll" CopyToOutputDirectory="PreserveNewest" Condition="Exists('SAPatcher.Security.dll')" />
   </ItemGroup>
+
+  <Target Name="CopySecurityDll" AfterTargets="Build">
+    <Copy SourceFiles="SecuritySource\SAPatcher.Security\bin\$(Configuration)\net9.0-windows10.0.19041.0\SAPatcher.Security.dll" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" Condition="Exists('SecuritySource\SAPatcher.Security\bin\$(Configuration)\net9.0-windows10.0.19041.0\SAPatcher.Security.dll')" />
+    <Copy SourceFiles="SecuritySource\SAPatcher.Security\bin\Release\net9.0-windows10.0.19041.0\SAPatcher.Security.dll" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" Condition="Exists('SecuritySource\SAPatcher.Security\bin\Release\net9.0-windows10.0.19041.0\SAPatcher.Security.dll')" />
+    <Copy SourceFiles="SAPatcher.Security.dll" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" Condition="Exists('SAPatcher.Security.dll')" />
+  </Target>
 </Project>

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Motion Launcher — SAPatcher Dark Cyber Edition</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="sap-body">
+  <div class="sap-container">
+    <!-- Ambient Background Lighting -->
+    <div class="ambient-glow glow-cyan"></div>
+    <div class="ambient-glow glow-purple"></div>
+
+    <!-- HUD Header / Titlebar -->
+    <header class="sap-header">
+      <div class="sap-brand">
+        <div class="sap-logo-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2" stroke="#00E5FF" stroke-width="2"/>
+            <circle cx="12" cy="12" r="3" fill="#7000FF"/>
+          </svg>
+        </div>
+        <div class="sap-brand-text">
+          <span class="sap-brand-title">MOTION LAUNCHER</span>
+          <span class="sap-brand-subtitle font-mono">SAPATCHER CYBER ENGINE</span>
+        </div>
+        <span class="sap-chip chip-glow font-mono" id="engineVersion">v2.0.0</span>
+      </div>
+
+      <div class="sap-header-center">
+        <div class="sap-telemetry-pill">
+          <span class="hud-dot hud-online"></span>
+          <span class="hud-text" id="hudGlobalStatus">СИСТЕМА ГОТОВА</span>
+          <span class="hud-divider">|</span>
+          <span class="font-mono text-cyan" id="hudLivePing">NET: OK</span>
+        </div>
+      </div>
+
+      <div class="sap-header-right">
+        <div class="sap-user-card" id="userCard">
+          <div class="sap-user-avatar" id="avatarLetter">M</div>
+          <div class="sap-user-meta">
+            <span class="sap-user-name font-mono" id="topNick">Player</span>
+            <span class="sap-user-shield">SAPatcher Shield</span>
+          </div>
+        </div>
+        <div class="sap-win-controls">
+          <button class="sap-win-btn" id="btnMinimize" title="Свернуть">
+            <svg width="12" height="12" viewBox="0 0 12 12"><path fill="currentColor" d="M1 9h10v2H1z"/></svg>
+          </button>
+          <button class="sap-win-btn btn-close" id="btnClose" title="Закрыть">
+            <svg width="12" height="12" viewBox="0 0 12 12"><path fill="currentColor" d="M1.5 1.5l9 9m0-9l-9 9" stroke="currentColor" stroke-width="1.8"/></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Deck Grid (3 Columns) -->
+    <main class="sap-deck">
+      <!-- COLUMN 1: HERO LAUNCH & TELEMETRY -->
+      <section class="sap-col sap-col-hero">
+        <!-- Active Server Hero Card -->
+        <div class="sap-card card-hero" id="heroCard">
+          <div class="card-hero-glow"></div>
+          <div class="card-hero-header">
+            <span class="font-mono text-cyan uppercase tracking">Выбранный сервер</span>
+            <span class="sap-badge badge-active" id="heroBadge">ONLINE</span>
+          </div>
+          <h1 class="hero-server-title" id="heroTitle">Подключение...</h1>
+          <div class="hero-telemetry-row">
+            <div class="telemetry-box">
+              <span class="telemetry-label">Игроков</span>
+              <span class="telemetry-val font-mono" id="heroOnline">0</span>
+            </div>
+            <div class="telemetry-box">
+              <span class="telemetry-label">Слотов</span>
+              <span class="telemetry-val font-mono" id="heroMax">1000</span>
+            </div>
+            <div class="telemetry-box">
+              <span class="telemetry-label">Адрес</span>
+              <span class="telemetry-val font-mono" id="heroIpPort">127.0.0.1:7777</span>
+            </div>
+          </div>
+
+          <!-- Big Action Button -->
+          <div class="hero-action-container">
+            <button class="sap-primary-btn" id="primaryLaunchBtn">
+              <div class="btn-glow-layer"></div>
+              <span class="btn-icon" id="launchBtnIcon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              </span>
+              <span class="btn-label font-heading" id="launchBtnLabel">ИГРАТЬ</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Download & Resources Telemetry -->
+        <div class="sap-card card-telemetry" id="telemetryCard">
+          <div class="telemetry-header">
+            <span class="card-title font-mono">ТЕЛЕМЕТРИЯ ФАЙЛОВ</span>
+            <span class="font-mono text-cyan" id="downSpeed">0 KB/s</span>
+          </div>
+          <div class="sap-progress-track">
+            <div class="sap-progress-glow" id="downProgressGlow" style="width: 100%;"></div>
+            <div class="sap-progress-bar" id="downProgressBar" style="width: 100%;"></div>
+          </div>
+          <div class="telemetry-status-row">
+            <span class="font-mono text-muted" id="downStatus">Файлы синхронизированы</span>
+            <span class="font-mono text-cyan font-bold" id="downPercentage">100%</span>
+          </div>
+          <div class="telemetry-actions">
+            <button class="sap-ghost-btn font-mono" id="btnVerifyFiles">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span>Проверить целостность</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- COLUMN 2: SERVERS LIST & PROFILE -->
+      <section class="sap-col sap-col-servers">
+        <!-- Nickname Card -->
+        <div class="sap-card card-profile">
+          <div class="card-header-compact">
+            <span class="card-title font-mono">ПРОФИЛЬ ИГРОКА</span>
+            <span class="sap-chip-subtle font-mono">NICKNAME</span>
+          </div>
+          <div class="sap-input-group">
+            <div class="input-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+            <input type="text" id="inputNickname" class="sap-input font-mono" placeholder="Name_Surname" maxlength="24">
+            <button class="sap-btn-icon-submit" id="btnSubmitNick" title="Сохранить">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Servers Deck -->
+        <div class="sap-card card-servers-list">
+          <div class="card-header-compact">
+            <span class="card-title font-mono">СПИСОК СЕРВЕРОВ</span>
+            <span class="sap-chip-subtle font-mono" id="serversCountBadge">0 СЕРВЕРОВ</span>
+          </div>
+          <div class="servers-scroll-container" id="serversList">
+            <!-- Dynamic server items via JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- COLUMN 3: ENGINE SETTINGS & TOOLS -->
+      <section class="sap-col sap-col-settings">
+        <!-- Fast Actions & Folders -->
+        <div class="sap-card card-paths">
+          <div class="card-header-compact">
+            <span class="card-title font-mono">КАТАЛОГИ И КЛЮЧИ</span>
+          </div>
+          <div class="path-display-box">
+            <span class="path-title font-mono">ПАПКА GTA:SA:</span>
+            <span class="path-string font-mono" id="gameFolderPath">Не выбрана</span>
+          </div>
+          <div class="actions-grid-2x2">
+            <button class="sap-action-card" id="btnSelectFolder">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <span>Выбрать путь</span>
+            </button>
+            <button class="sap-action-card" id="btnOpenFolder">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              <span>В проводнике</span>
+            </button>
+            <button class="sap-action-card" id="btnScreenshots">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <span>Скриншоты F8</span>
+            </button>
+            <button class="sap-action-card" id="btnHwid">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+              <span>HWID Ключ</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Toggles & Modifiers -->
+        <div class="sap-card card-switches">
+          <div class="card-header-compact">
+            <span class="card-title font-mono">ПЕРЕКЛЮЧАТЕЛИ ДВИЖКА</span>
+          </div>
+          <div class="switches-list">
+            <!-- Widescreen Fix -->
+            <div class="sap-switch-row" id="toggleWidescreen">
+              <div class="switch-info">
+                <span class="switch-title">Widescreen Fix</span>
+                <span class="switch-desc">Правильное соотношение 16:9 / 21:9</span>
+              </div>
+              <div class="sap-toggle-indicator" id="indWidescreen">ВКЛ</div>
+            </div>
+
+            <!-- High Performance -->
+            <div class="sap-switch-row" id="toggleHighPerf">
+              <div class="switch-info">
+                <span class="switch-title">Высокая производительность</span>
+                <span class="switch-desc">Приоритет процессов и оптимизация</span>
+              </div>
+              <div class="sap-toggle-indicator" id="indHighPerf">ВЫКЛ</div>
+            </div>
+
+            <!-- Winter Mode -->
+            <div class="sap-switch-row" id="toggleWinter">
+              <div class="switch-info">
+                <span class="switch-title">Зимняя атмосфера</span>
+                <span class="switch-desc">Снег и визуальные модификации</span>
+              </div>
+              <div class="sap-toggle-indicator" id="indWinter">ВЫКЛ</div>
+            </div>
+
+            <!-- Run as Admin -->
+            <div class="sap-switch-row" id="toggleAdmin">
+              <div class="switch-info">
+                <span class="switch-title">Права администратора</span>
+                <span class="switch-desc">Запуск с повышенными привилегиями</span>
+              </div>
+              <div class="sap-toggle-indicator" id="indAdmin">ВЫКЛ</div>
+            </div>
+
+            <!-- Graphics Lock Shield Badge -->
+            <div class="sap-shield-banner" id="bannerGraphicsLock">
+              <span class="shield-icon">🛡️</span>
+              <div class="shield-text">
+                <span class="shield-title">Стандартная графика (Зафиксировано)</span>
+                <span class="shield-sub">Выбор DXVK версий управляется в SAPatcher</span>
+              </div>
+            </div>
+
+            <!-- Auto-close Lock Shield Badge -->
+            <div class="sap-shield-banner" id="bannerAutocloseLock">
+              <span class="shield-icon">🔒</span>
+              <div class="shield-text">
+                <span class="shield-title">Сворачивание лаунчера отключено</span>
+                <span class="shield-sub">Окно остается активным при запуске</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Social Media Cyber Links -->
+        <div class="sap-card card-socials">
+          <div class="socials-grid">
+            <button class="cyber-link-btn" data-url="https://vk.com/motion_gta">VK</button>
+            <button class="cyber-link-btn" data-url="https://t.me/motion_gta">TELEGRAM</button>
+            <button class="cyber-link-btn" data-url="https://discord.gg/motion">DISCORD</button>
+            <button class="cyber-link-btn" data-url="https://mn-p.com">САЙТ</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom Telemetry Ticker -->
+    <footer class="sap-footer">
+      <div class="footer-left font-mono">
+        <span class="text-cyan">SAPATCHER PRO MOD</span>
+        <span class="divider">/</span>
+        <span class="text-muted" id="bottomStatus">Инициализация завершена</span>
+      </div>
+      <div class="footer-right font-mono">
+        <button class="help-btn" id="btnHelpDesk">СПРАВКА И ПОДДЕРЖКА</button>
+      </div>
+    </footer>
+
+    <!-- Cyber Toast Container -->
+    <div class="sap-toast-container" id="toastArea"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

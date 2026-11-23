@@ -577,10 +577,42 @@
     init() {
       const runBtn = document.getElementById('runDiagnosticsBtn');
       if (runBtn) {
-        runBtn.addEventListener('click', () => this.run());
+        runBtn.addEventListener('click', () => this.run(true));
       }
 
+      this.bindGpuMockControls();
       this.setupPhotinoBridge();
+    },
+
+    bindGpuMockControls() {
+      const applyBtn = document.getElementById('btnApplyGpuMock');
+      const resetBtn = document.getElementById('btnResetGpuMock');
+      const select = document.getElementById('devGpuPresetSelect');
+
+      if (applyBtn && select) {
+        applyBtn.addEventListener('click', () => {
+          const val = select.value;
+          this.sendIpc({ action: 'setGpuMock', preset: val });
+          Toast.show(`Эмуляция GPU изменена: ${select.selectedOptions[0]?.textContent || val}`);
+        });
+      }
+
+      if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+          this.sendIpc({ action: 'resetGpuMock' });
+          if (select) select.value = 'real';
+          Toast.show('Эмуляция GPU сброшена на реальную видеокарту.');
+        });
+      }
+    },
+
+    sendIpc(obj) {
+      const s = JSON.stringify(obj);
+      if (window.external && typeof window.external.sendMessage === 'function') {
+        window.external.sendMessage(s);
+      } else if (window.chrome && window.chrome.webview && typeof window.chrome.webview.postMessage === 'function') {
+        window.chrome.webview.postMessage(s);
+      }
     },
 
     setupPhotinoBridge() {
@@ -594,6 +626,8 @@
 
           if (evt === 'diagnosticsResult') {
             this.applyReport(payloadData);
+          } else if (evt === 'gpuMockStatusResult') {
+            this.handleGpuMockStatus(data);
           } else if (evt === 'diagnosticsError') {
             this.handleError(data.error || data.Error);
           } else if (evt === 'motionLauncherResult') {
@@ -618,12 +652,54 @@
             MotionProjectManager.handlePatchResult(payloadData);
           } else if (evt === 'motionRestoreResult') {
             MotionProjectManager.handleRestoreResult(payloadData);
+          } else if (evt === 'launcherUiThemeSwitched') {
+            const msg = payloadData && (payloadData.message || payloadData.Message) ? (payloadData.message || payloadData.Message) : 'Интерфейс переключен';
+            MotionProjectManager.logToTerminal(`[THEME] ${msg}`, payloadData && payloadData.success ? 'success' : 'warn');
           } else if (evt === 'settingsLoaded') {
             MotionProjectManager.applyLoadedSettings(payloadData);
+            if (typeof OverlayManager !== 'undefined') {
+              OverlayManager.applyLoadedSettings(payloadData);
+            }
+          } else if (evt === 'deployOverlayDllResult') {
+            if (typeof OverlayManager !== 'undefined') {
+              OverlayManager.handleDeployResult(data);
+            }
+          } else if (evt === 'overlayIpcSynced') {
+            if (typeof OverlayManager !== 'undefined') {
+              OverlayManager.log('[IPC] Настройки успешно синхронизированы в памяти', 'success');
+            }
           } else if (evt === 'launcherStarted') {
             MotionProjectManager.onLauncherStarted(payloadData);
           } else if (evt === 'launcherViolation') {
             MotionProjectManager.onLauncherViolation(payloadData);
+          } else if (evt === 'developerStatus') {
+            if (typeof DeveloperModeManager !== 'undefined') {
+              DeveloperModeManager.onStatus(payloadData);
+            }
+          } else if (evt === 'developerUnlockResult') {
+            if (typeof DeveloperModeManager !== 'undefined') {
+              DeveloperModeManager.onUnlockResult(payloadData);
+            }
+          } else if (evt === 'standaloneExeSelected') {
+            if (typeof StandaloneLaaManager !== 'undefined') {
+              StandaloneLaaManager.onExeSelected(data);
+            }
+          } else if (evt === 'standaloneExeInspected') {
+            if (typeof StandaloneLaaManager !== 'undefined') {
+              StandaloneLaaManager.onExeInspected(data);
+            }
+          } else if (evt === 'applyStandaloneLaaResult') {
+            if (typeof StandaloneLaaManager !== 'undefined') {
+              StandaloneLaaManager.onApplyResult(data);
+            }
+          } else if (evt === 'restoreStandaloneExeResult') {
+            if (typeof StandaloneLaaManager !== 'undefined') {
+              StandaloneLaaManager.onRestoreResult(data);
+            }
+          } else if (evt === 'launchStandaloneExeResult') {
+            if (typeof StandaloneLaaManager !== 'undefined') {
+              StandaloneLaaManager.onLaunchResult(data);
+            }
           }
         } catch (e) {
           console.error('Failed to parse IPC message', e);
@@ -639,24 +715,39 @@
 
       setTimeout(() => {
         try {
-          const send = (obj) => {
-            const s = JSON.stringify(obj);
-            if (window.external && typeof window.external.sendMessage === 'function') {
-              window.external.sendMessage(s);
-            } else if (window.chrome && window.chrome.webview && typeof window.chrome.webview.postMessage === 'function') {
-              window.chrome.webview.postMessage(s);
-            }
-          };
+          const send = (obj) => this.sendIpc(obj);
           send({ action: 'getSettings' });
           send({ action: 'checkMotionPatchStatus' });
+          send({ action: 'checkDeveloperStatus' });
+          send({ action: 'getGpuMockStatus' });
+          send({ action: 'runCheck' });
         } catch (e) {}
       }, 100);
     },
 
-    run() {
+    handleGpuMockStatus(data) {
+      if (!data) return;
+      const select = document.getElementById('devGpuPresetSelect');
+      const badge = document.getElementById('devGpuActiveBadge');
+      const bar = document.getElementById('devGpuMockBar');
+
+      if (select && data.currentPreset) {
+        select.value = data.currentPreset;
+      }
+      if (badge) {
+        badge.style.display = data.isMock ? 'inline-flex' : 'none';
+      }
+      if (bar && (data.isMock || (typeof DeveloperModeManager !== 'undefined' && DeveloperModeManager.isActive))) {
+        bar.style.display = 'flex';
+      }
+    },
+
+    run(isManual = false) {
       if (this.isScanning) return;
       this.setLoadingState(true);
-      Toast.show(I18nManager.get('toast.diag_start'));
+      if (isManual) {
+        Toast.show(I18nManager.get('toast.diag_start'));
+      }
 
       const msg = JSON.stringify({ action: 'runCheck' });
       if (window.external && typeof window.external.sendMessage === 'function') {
@@ -731,10 +822,67 @@
         if (gpuDirectx) gpuDirectx.textContent = report.gpu.directXSupport;
         if (gpuVulkan) gpuVulkan.textContent = report.gpu.vulkanSupport;
 
+        const gpuBadge = document.getElementById('gpuBadge');
+        if (gpuBadge) {
+          if (report.gpu.badgeText) {
+            gpuBadge.textContent = report.gpu.badgeText;
+            gpuBadge.className = `badge font-mono ${report.gpu.badgeClass || 'badge-accent'}`;
+          } else {
+            gpuBadge.textContent = report.gpu.vulkanFound ? 'Vulkan 1.3/1.4 Ready' : 'Vulkan не поддерживается';
+            gpuBadge.className = `badge font-mono ${report.gpu.vulkanFound ? 'badge-accent' : 'badge-danger'}`;
+          }
+        }
+
         const verdictTitle = document.getElementById('gpuVerdictTitle');
         const verdictDesc = document.getElementById('gpuVerdictDesc');
-        if (verdictTitle) verdictTitle.textContent = I18nManager.get(report.gpu.verdictTextKey || 'gpu.verdict_text');
-        if (verdictDesc) verdictDesc.textContent = I18nManager.get(report.gpu.verdictDescKey || 'gpu.verdict_desc');
+        if (verdictTitle) {
+          const key = report.gpu.verdictTextKey || 'gpu.verdict_text';
+          verdictTitle.textContent = key.startsWith('gpu.') ? I18nManager.get(key) : key;
+        }
+        if (verdictDesc) {
+          const key = report.gpu.verdictDescKey || 'gpu.verdict_desc';
+          verdictDesc.textContent = key.startsWith('gpu.') ? I18nManager.get(key) : key;
+        }
+
+        if (report.gpu.dxvkCompat) {
+          const updateTier = (elemId, tier) => {
+            const card = document.getElementById(elemId);
+            if (!card || !tier) return;
+            const badge = card.querySelector('.badge');
+            const spec = card.querySelector('.tier-spec');
+            if (spec && tier.specification) spec.textContent = tier.specification;
+            if (badge) {
+              const bKey = tier.badgeKey || '';
+              badge.textContent = bKey.startsWith('gpu.') ? I18nManager.get(bKey) : bKey;
+              badge.className = 'badge font-mono ' + (
+                tier.status === 'recommended' ? 'badge-highlight' :
+                tier.status === 'compatible' ? 'badge-success' :
+                tier.status === 'supported' ? 'badge-info' : 'badge-danger'
+              );
+            }
+            card.classList.toggle('tier-card--highlight', tier.status === 'recommended');
+            card.style.opacity = tier.status === 'incompatible' ? '0.5' : '1.0';
+          };
+
+          updateTier('tierDxvk1103', report.gpu.dxvkCompat.dxvk1103);
+          updateTier('tierDxvk23', report.gpu.dxvkCompat.dxvk23);
+          updateTier('tierDxvk30', report.gpu.dxvkCompat.dxvk30);
+          updateTier('tierDxvk311', report.gpu.dxvkCompat.dxvk311);
+
+          this.filterDxvkSelectorByGpu(report.gpu.dxvkCompat);
+        }
+
+        const devActiveBadge = document.getElementById('devGpuActiveBadge');
+        const devGpuBar = document.getElementById('devGpuMockBar');
+        const devPresetSelect = document.getElementById('devGpuPresetSelect');
+
+        if (report.gpu.isMock) {
+          if (devActiveBadge) devActiveBadge.style.display = 'inline-flex';
+          if (devGpuBar) devGpuBar.style.display = 'flex';
+          if (devPresetSelect && report.gpu.mockPresetId) devPresetSelect.value = report.gpu.mockPresetId;
+        } else {
+          if (devActiveBadge) devActiveBadge.style.display = 'none';
+        }
       }
 
       if (report.cpu) {
@@ -799,6 +947,171 @@
       Toast.show(I18nManager.get('toast.diag_success') + ' ' + I18nManager.get('toast.report_saved'), 4500);
     },
 
+    filterDxvkSelectorByGpu(compatMatrix) {
+      const selector = document.getElementById('dxvkVersionSelector');
+      if (!selector || !compatMatrix) return;
+
+      const versionMap = {
+        '3.1.1': compatMatrix.dxvk311,
+        '3.0': compatMatrix.dxvk30,
+        '2.3': compatMatrix.dxvk23,
+        '1.10.3': compatMatrix.dxvk1103
+      };
+
+      const cards = selector.querySelectorAll('.dxvk-radio-card[data-version]');
+      let visibleCount = 0;
+      let hasActiveVisible = false;
+      let recommendedCard = null;
+      let firstCompatibleCard = null;
+
+      cards.forEach((card) => {
+        const ver = card.dataset.version;
+        const tier = versionMap[ver];
+        const isCompatible = tier && tier.status !== 'incompatible';
+
+        if (isCompatible) {
+          card.style.display = '';
+          visibleCount++;
+          const radio = card.querySelector('input[type="radio"]');
+          if (radio) radio.disabled = false;
+
+          if (tier.status === 'recommended') {
+            recommendedCard = card;
+          }
+          if (!firstCompatibleCard) {
+            firstCompatibleCard = card;
+          }
+          if (card.classList.contains('active')) {
+            hasActiveVisible = true;
+          }
+        } else {
+          card.style.display = 'none';
+          card.classList.remove('active');
+          const radio = card.querySelector('input[type="radio"]');
+          if (radio) {
+            radio.disabled = true;
+            radio.checked = false;
+          }
+        }
+      });
+
+      let banner = document.getElementById('dxvkNoCompatWarning');
+      if (visibleCount === 0) {
+        if (!banner) {
+          banner = document.createElement('div');
+          banner.id = 'dxvkNoCompatWarning';
+          banner.className = 'dxvk-no-compat-banner';
+          banner.style.cssText = 'grid-column: 1 / -1; padding: 14px 16px; background: rgba(244, 63, 94, 0.12); border: 1px solid rgba(244, 63, 94, 0.35); border-radius: 12px; display: flex; align-items: center; gap: 12px; color: #f43f5e; font-size: 13px; font-weight: 600;';
+          banner.innerHTML = '<span style="font-size: 20px;">⚠️</span><span>Видеокарта не поддерживает Vulkan API. Ни одна версия DXVK не доступна для выбора. Игра будет запускаться исключительно через нативный DirectX 9.</span>';
+          selector.appendChild(banner);
+        } else {
+          banner.style.display = 'flex';
+        }
+      } else if (banner) {
+        banner.style.display = 'none';
+      }
+
+      if (!hasActiveVisible && visibleCount > 0) {
+        const targetCard = recommendedCard || firstCompatibleCard;
+        if (targetCard) {
+          cards.forEach((c) => c.classList.remove('active'));
+          targetCard.classList.add('active');
+          const radio = targetCard.querySelector('input[type="radio"]');
+          if (radio) radio.checked = true;
+          const targetVer = targetCard.dataset.version;
+          if (typeof this.updateDxvkVersionSpecifics === 'function') {
+            this.updateDxvkVersionSpecifics(targetVer);
+          }
+          this.logToTerminal(`[COMPAT-FILTER] Для текущего GPU выбрана совместимая версия: DXVK ${targetVer}`, 'detect');
+        }
+      }
+
+      const hasVulkanSupport = visibleCount > 0;
+      this.hasVulkanSupport = hasVulkanSupport;
+
+      const navOverlay = document.getElementById('navOverlay');
+      const navOverlayBadge = document.getElementById('navOverlayBadge');
+      const navProjects = document.getElementById('navProjects');
+      const navProjectsBadge = document.getElementById('navProjectsBadge');
+      const navStandaloneLaa = document.getElementById('navStandaloneLaa');
+
+      if (!hasVulkanSupport) {
+        if (navOverlay) {
+          navOverlay.style.pointerEvents = 'none';
+          navOverlay.style.opacity = '0.35';
+          navOverlay.style.cursor = 'not-allowed';
+          navOverlay.setAttribute('disabled', 'disabled');
+          if (navOverlayBadge) {
+            navOverlayBadge.textContent = 'НЕДОСТУПНО';
+            navOverlayBadge.className = 'badge badge-wip font-mono';
+          }
+        }
+        if (navProjects) {
+          navProjects.style.pointerEvents = 'none';
+          navProjects.style.opacity = '0.35';
+          navProjects.style.cursor = 'not-allowed';
+          navProjects.setAttribute('disabled', 'disabled');
+          if (navProjectsBadge) {
+            navProjectsBadge.textContent = 'НЕДОСТУПНО';
+            navProjectsBadge.className = 'badge badge-wip font-mono';
+          }
+        }
+        if (navStandaloneLaa) {
+          navStandaloneLaa.style.display = 'flex';
+        }
+
+        const currentActiveNav = document.querySelector('.nav-item.active');
+        const activeTabId = currentActiveNav ? currentActiveNav.getAttribute('data-tab') : '';
+        if (activeTabId === 'tab-projects' || activeTabId === 'tab-overlay') {
+          if (navStandaloneLaa) {
+            navStandaloneLaa.click();
+          }
+        }
+      } else {
+        if (navOverlay) {
+          navOverlay.style.pointerEvents = '';
+          navOverlay.style.opacity = '';
+          navOverlay.style.cursor = '';
+          navOverlay.removeAttribute('disabled');
+          if (navOverlayBadge) {
+            navOverlayBadge.textContent = 'DXVK';
+            navOverlayBadge.className = 'badge badge-cyan font-mono';
+          }
+        }
+        if (navProjects) {
+          navProjects.style.pointerEvents = '';
+          navProjects.style.opacity = '';
+          navProjects.style.cursor = '';
+          navProjects.removeAttribute('disabled');
+          if (navProjectsBadge) {
+            navProjectsBadge.textContent = 'LIVE';
+            navProjectsBadge.className = 'badge badge-active font-mono';
+          }
+        }
+        if (navStandaloneLaa) {
+          navStandaloneLaa.style.display = 'none';
+        }
+
+        const currentActiveNav = document.querySelector('.nav-item.active');
+        const activeTabId = currentActiveNav ? currentActiveNav.getAttribute('data-tab') : '';
+        if (activeTabId === 'tab-standalone-laa') {
+          if (navProjects) {
+            navProjects.click();
+          }
+        }
+      }
+
+      if (typeof OverlayManager.updateGpuVulkanState === 'function') {
+        OverlayManager.updateGpuVulkanState(hasVulkanSupport);
+      }
+      if (typeof MotionProjectManager.updateVulkanCompatibilityState === 'function') {
+        MotionProjectManager.updateVulkanCompatibilityState(hasVulkanSupport);
+      }
+      if (typeof StandaloneLaaManager !== 'undefined' && typeof StandaloneLaaManager.updateVulkanState === 'function') {
+        StandaloneLaaManager.updateVulkanState(hasVulkanSupport);
+      }
+    },
+
     handleError(errMsg) {
       this.setLoadingState(false);
       Dialogs.showError('SAP-5020', I18nManager.get('toast.diag_error'), errMsg);
@@ -861,6 +1174,85 @@
     detectedMonitorHz: 200,
     isInstalling: false,
     updateFpsLimiterUI: null,
+    hasVulkanSupport: true,
+
+    updateVulkanCompatibilityState(hasVulkan) {
+      this.hasVulkanSupport = hasVulkan;
+      const limiterCard = document.querySelector('.limiter-config-card');
+      const hudCard = document.querySelector('.hud-config-card');
+      const fpsLimitToggle = document.getElementById('motionEnableFpsLimit');
+      const hudToggle = document.getElementById('motionHudToggle');
+      const installBtn = document.getElementById('motionInstallBtn');
+
+      if (!hasVulkan) {
+        if (limiterCard) {
+          limiterCard.style.opacity = '0.4';
+          limiterCard.style.pointerEvents = 'none';
+        }
+        if (hudCard) {
+          hudCard.style.opacity = '0.4';
+          hudCard.style.pointerEvents = 'none';
+        }
+        if (fpsLimitToggle) fpsLimitToggle.checked = false;
+        if (hudToggle) hudToggle.checked = false;
+
+        this.updateInstallBtnForNoVulkan();
+      } else {
+        if (limiterCard) {
+          limiterCard.style.opacity = '1';
+          limiterCard.style.pointerEvents = 'auto';
+        }
+        if (hudCard) {
+          hudCard.style.opacity = '1';
+          hudCard.style.pointerEvents = 'auto';
+        }
+        if (installBtn) {
+          const btnText = installBtn.querySelector('.btn-text');
+          if (btnText) btnText.textContent = I18nManager.get('motion.btn_install') || 'Установить DXVK и патч 4 ГБ ОЗУ';
+        }
+        this.updatePatchStatusUI();
+      }
+    },
+
+    updateInstallBtnForNoVulkan() {
+      const installBtn = document.getElementById('motionInstallBtn');
+      const prereqBadge = document.getElementById('motionInstallPrereqBadge');
+      if (!installBtn) return;
+      const isPatched = Boolean(this.patchStatus && (this.patchStatus.isPatched === true || this.patchStatus.IsPatched === true));
+      const laaCheckbox = document.getElementById('motionEnable4gbPatch');
+      const enable4gb = laaCheckbox ? laaCheckbox.checked : true;
+      const btnText = installBtn.querySelector('.btn-text');
+
+      if (!enable4gb) {
+        installBtn.disabled = true;
+        installBtn.classList.add('btn-disabled');
+        installBtn.title = 'Видеокарта не поддерживает Vulkan API. Установка DXVK заблокирована.';
+        if (btnText) btnText.textContent = 'Установка DXVK заблокирована';
+        if (prereqBadge) {
+          prereqBadge.textContent = 'GPU: Vulkan не поддерживается';
+          prereqBadge.className = 'badge badge-danger font-mono';
+        }
+      } else if (!isPatched) {
+        installBtn.disabled = true;
+        installBtn.classList.add('btn-disabled');
+        installBtn.title = 'Сначала необходимо распаковать и пропатчить лаунчер';
+        if (btnText) btnText.textContent = 'Установить патч 4 ГБ ОЗУ (Без DXVK)';
+        if (prereqBadge) {
+          prereqBadge.textContent = 'Требуется патчинг лаунчера';
+          prereqBadge.className = 'badge badge-warning font-mono';
+        }
+      } else {
+        installBtn.disabled = false;
+        installBtn.removeAttribute('disabled');
+        installBtn.classList.remove('btn-disabled');
+        installBtn.title = 'Установка только патча 4 ГБ ОЗУ (DXVK пропущен из-за отсутствия Vulkan на GPU)';
+        if (btnText) btnText.textContent = 'Установить патч 4 ГБ ОЗУ (Без DXVK)';
+        if (prereqBadge) {
+          prereqBadge.textContent = 'Готов: Только 4GB Patch (Без DXVK)';
+          prereqBadge.className = 'badge badge-info font-mono';
+        }
+      }
+    },
 
     init() {
       this.bindEvents();
@@ -1013,6 +1405,25 @@
         });
       }
 
+      const openElectronLogBtn = document.getElementById('motionOpenElectronLogBtn');
+      if (openElectronLogBtn) {
+        openElectronLogBtn.addEventListener('click', () => {
+          const input = document.getElementById('motionLauncherPathInput');
+          const path = input ? input.value : '';
+          this.sendIpc({ action: 'openElectronLog', path });
+          Toast.show(I18nManager.currentLang === 'en' ? 'Opening Electron log file...' : 'Открытие лог-файла Electron...');
+        });
+      }
+
+      const electronLoggingCb = document.getElementById('motionEnableElectronLogging');
+      if (electronLoggingCb) {
+        electronLoggingCb.addEventListener('change', () => {
+          this.saveCurrentSettings();
+          const state = electronLoggingCb.checked ? 'включено' : 'отключено';
+          this.logToTerminal(`[SETTINGS] Логирование Electron ${state}. Перепатчите лаунчер для применения.`, 'hint');
+        });
+      }
+
       if (installBtn) {
         installBtn.addEventListener('click', () => this.installOptimization());
       }
@@ -1065,6 +1476,7 @@
         }
         updateFpsLimiter();
       };
+      this.updateDxvkVersionSpecifics = updateDxvkVersionSpecifics;
 
       radioCards.forEach((card) => {
         card.addEventListener('click', () => {
@@ -1075,6 +1487,31 @@
           const ver = card.dataset.version;
           updateDxvkVersionSpecifics(ver);
           this.logToTerminal(`[SELECT] Выбрана ветка транслятора: DXVK ${ver}`, 'detect');
+        });
+      });
+
+      const uiThemeCards = document.querySelectorAll('.dxvk-radio-card[data-ui-theme]');
+      uiThemeCards.forEach((card) => {
+        card.addEventListener('click', () => {
+          uiThemeCards.forEach((c) => c.classList.remove('active'));
+          card.classList.add('active');
+          const radio = card.querySelector('input[type="radio"]');
+          if (radio) radio.checked = true;
+          const theme = card.dataset.uiTheme || 'v2';
+          this.currentUiTheme = theme;
+          this.saveCurrentSettings();
+          const input = document.getElementById('motionLauncherPathInput');
+          const path = input ? input.value : '';
+          this.sendIpc({ action: 'switchLauncherUiTheme', path, theme });
+          const themeNames = {
+            'v1': 'Классический (v1.2.46)',
+            'v2': 'Современный (v2.0.0)',
+            'metro': 'Windows 8 Live Tiles (Metro UI)',
+            'sapatcher': 'SAPatcher Dark Cyber Glass'
+          };
+          const themeName = themeNames[theme] || 'Современный (v2.0.0)';
+          this.logToTerminal(`[THEME] Выбран интерфейс: ${themeName}`, 'detect');
+          Toast.show(`Активирован интерфейс: ${themeName}`);
         });
       });
 
@@ -1208,6 +1645,15 @@
       };
       if (hudXInput) hudXInput.addEventListener('input', handleCoordChange);
       if (hudYInput) hudYInput.addEventListener('input', handleCoordChange);
+
+      const laaToggle = document.getElementById('motionEnable4gbPatch');
+      if (laaToggle) {
+        laaToggle.addEventListener('change', () => {
+          if (!this.hasVulkanSupport) {
+            this.updateInstallBtnForNoVulkan();
+          }
+        });
+      }
     },
 
     sendIpc(msgObj) {
@@ -1297,11 +1743,24 @@
       const pathInput = document.getElementById('motionLauncherPathInput');
       const launcherPath = pathInput ? pathInput.value : '';
 
-      const selectedVerRadio = document.querySelector('input[name="motionDxvkVer"]:checked');
-      const dxvkVersion = selectedVerRadio ? selectedVerRadio.value : '3.1.1';
-
       const laaCheckbox = document.getElementById('motionEnable4gbPatch');
       const enable4gb = laaCheckbox ? laaCheckbox.checked : true;
+
+      let dxvkVersion = '3.1.1';
+      if (!this.hasVulkanSupport) {
+        if (!enable4gb) {
+          Toast.show('Установка заблокирована: видеокарта не поддерживает Vulkan API, а патч 4 ГБ ОЗУ отключен!', 4500);
+          this.logToTerminal('------------------------------------------------------------', 'error');
+          this.logToTerminal('[GPU_BLOCK] Видеокарта не поддерживает Vulkan API. Установка DXVK заблокирована.', 'error');
+          this.isInstalling = false;
+          return;
+        }
+        dxvkVersion = 'none';
+        this.logToTerminal('[COMPAT] Обнаружен GPU без поддержки Vulkan. Будет применен ТОЛЬКО патч 4 ГБ ОЗУ (DXVK пропущен).', 'warn');
+      } else {
+        const selectedVerRadio = document.querySelector('input[name="motionDxvkVer"]:checked');
+        dxvkVersion = selectedVerRadio ? selectedVerRadio.value : '3.1.1';
+      }
 
       const hudEnableCb = document.getElementById('motionEnableHud');
       const enableHud = hudEnableCb ? hudEnableCb.checked : true;
@@ -1344,8 +1803,8 @@
           ? '[SECURITY_ALERT] Installation of DXVK and 4GB LAA is blocked: Launcher is not patched yet!'
           : '[ЗАЩИТА] Установка DXVK и 4GB LAA заблокирована: лаунчер ещё не пропатчен!', 'error');
         this.logToTerminal(isEn
-          ? '[HINT] Click "Unpack & Patch Launcher" above to secure and unlock the installer.'
-          : '[ПОДСКАЗКА] Нажмите «Распаковать и пропатчить лаунчер» для разблокировки.', 'warn');
+          ? '[INFO] Click "Unpack & Patch Launcher" above to secure and unlock the installer.'
+          : '[ИНФО] Нажмите «Распаковать и пропатчить лаунчер» для разблокировки.', 'warn');
         const patchBtn = document.getElementById('motionPatchBtn');
         if (patchBtn) {
           patchBtn.classList.add('animate-pulse');
@@ -1623,51 +2082,99 @@
       if (!data) return;
       this.patchStatus = data;
 
+      const ver = data.detectedVersion || data.DetectedVersion || '';
+      const isVerBlocked = Boolean(data.isVersionBlocked === true || data.IsVersionBlocked === true);
+      const hasWarning = Boolean(data.hasCompatibilityWarning === true || data.HasCompatibilityWarning === true);
+      const warningMsg = data.versionWarningMessage || data.VersionWarningMessage || '';
       const isPatched = Boolean(data.isPatched === true || data.IsPatched === true);
       const isUnpacked = Boolean(data.isUnpacked === true || data.IsUnpacked === true);
       const hasIntegrity = Boolean(data.integrityManifestExists === true || data.IntegrityManifestExists === true);
       const titleEl = document.getElementById('motionPatchStatusTitle');
       const descEl = document.getElementById('motionPatchStatusDesc');
       const badgeEl = document.getElementById('motionGuardBadge');
+      const verBadge = document.getElementById('motionVersionBadge');
       const integrityBadge = document.getElementById('motionIntegrityBadge');
       const isEn = I18nManager.currentLang === 'en';
 
-      if (isPatched) {
+      if (verBadge) {
+        if (isVerBlocked) {
+          verBadge.textContent = isEn ? `v${ver || 'N/A'} (BLOCKED < 1.2.46)` : `v${ver || 'N/A'} (ЗАБЛОКИРОВАНО < 1.2.46)`;
+          verBadge.className = 'badge badge-danger font-mono';
+        } else if (hasWarning) {
+          verBadge.textContent = isEn ? `v${ver || 'N/A'} (Compatibility > 2.0.0)` : `v${ver || 'N/A'} (Предупреждение > 2.0.0)`;
+          verBadge.className = 'badge badge-warning font-mono';
+        } else if (ver) {
+          verBadge.textContent = isEn ? `v${ver} (Compatible)` : `v${ver} (Совместимо)`;
+          verBadge.className = 'badge badge-success font-mono';
+        } else {
+          verBadge.textContent = isEn ? 'Version: N/A' : 'Версия: Не найдена';
+          verBadge.className = 'badge badge-muted font-mono';
+        }
+      }
+
+      const patchBtn = document.getElementById('motionPatchBtn');
+      if (patchBtn) {
+        if (isVerBlocked) {
+          patchBtn.disabled = true;
+          patchBtn.setAttribute('disabled', 'disabled');
+          patchBtn.classList.add('btn-disabled');
+          patchBtn.title = warningMsg || (isEn ? 'Launcher version is blocked (< 1.2.46)' : 'Версия лаунчера заблокирована (< 1.2.46)');
+        } else {
+          patchBtn.disabled = false;
+          patchBtn.removeAttribute('disabled');
+          patchBtn.classList.remove('btn-disabled');
+          patchBtn.title = isEn ? 'Unpack and patch Motion Launcher' : 'Распаковать и пропатчить Motion Launcher';
+        }
+      }
+
+      if (isVerBlocked) {
+        if (titleEl) titleEl.textContent = isEn ? `Launcher v${ver || 'N/A'} Outdated & Blocked` : `Версия лаунчера v${ver || 'N/A'} устарела и заблокирована`;
+        if (descEl) descEl.textContent = warningMsg || (isEn ? 'Launcher versions below 1.2.46 are blocked. Please update official launcher.' : 'Версии лаунчера ниже 1.2.46 заблокированы. Обновите официальный лаунчер.');
+        if (descEl) descEl.style.color = 'var(--color-danger, #ef4444)';
+      } else if (isPatched) {
         if (titleEl) titleEl.textContent = isEn ? 'Launcher Status: Patched & Protected by SAPatcher' : 'Статус лаунчера: Защищён и пропатчен SAPatcher';
         if (descEl) descEl.textContent = isEn ? 'Launch disallowed without SAPatcher background service. 5s popup widget active.' : 'Запуск невозможен без фоновой службы SAPatcher. 5-сек виджет активен.';
+        if (descEl) descEl.style.color = 'var(--color-text-muted)';
         if (badgeEl) {
           badgeEl.textContent = isEn ? 'Guard: ACTIVE' : 'Защита: АКТИВНА';
           badgeEl.className = 'badge badge-success font-mono';
         }
       } else {
         if (titleEl) titleEl.textContent = isEn ? 'Launcher Status: Not Patched' : 'Статус лаунчера: Не пропатчен';
-        if (descEl) descEl.textContent = isEn ? 'Click "Unpack & Patch Launcher" to link with SAPatcher service & widget.' : 'Нажмите «Распаковать и пропатчить лаунчер» для привязки к службе и виджету.';
+        if (descEl) descEl.textContent = hasWarning ? warningMsg : (isEn ? 'Click "Unpack & Patch Launcher" to link with SAPatcher service & widget.' : 'Нажмите «Распаковать и пропатчить лаунчер» для привязки к службе и виджету.');
+        if (descEl) descEl.style.color = hasWarning ? 'var(--color-warning, #f59e0b)' : 'var(--color-text-muted)';
         if (badgeEl) {
           badgeEl.textContent = isEn ? 'Guard: INACTIVE' : 'Защита: Не установлена';
           badgeEl.className = 'badge badge-muted font-mono';
         }
       }
 
-      const installBtn = document.getElementById('motionInstallBtn');
-      const prereqBadge = document.getElementById('motionInstallPrereqBadge');
-      if (installBtn) {
-        if (isPatched) {
-          installBtn.disabled = false;
-          installBtn.removeAttribute('disabled');
-          installBtn.classList.remove('btn-disabled');
-          installBtn.title = isEn ? 'Install DXVK (32-bit) and 4GB RAM Patch to game directory' : 'Установить DXVK (32-бит) и патч 4 ГБ ОЗУ в каталог игры';
-          if (prereqBadge) {
-            prereqBadge.textContent = isEn ? 'Launcher Patched — Ready' : 'Лаунчер пропатчен — Готов к установке';
-            prereqBadge.className = 'badge badge-success font-mono';
-          }
-        } else {
-          installBtn.disabled = true;
-          installBtn.setAttribute('disabled', 'disabled');
-          installBtn.classList.add('btn-disabled');
-          installBtn.title = isEn ? 'Unpack and patch launcher first before installing DXVK' : 'Сначала необходимо распаковать и пропатчить лаунчер';
-          if (prereqBadge) {
-            prereqBadge.textContent = isEn ? 'Requires Launcher Patching' : 'Требуется предварительный патчинг лаунчера';
-            prereqBadge.className = 'badge badge-warning font-mono';
+      if (!this.hasVulkanSupport) {
+        this.updateInstallBtnForNoVulkan();
+      } else {
+        const installBtn = document.getElementById('motionInstallBtn');
+        const prereqBadge = document.getElementById('motionInstallPrereqBadge');
+        if (installBtn) {
+          const btnText = installBtn.querySelector('.btn-text');
+          if (btnText) btnText.textContent = I18nManager.get('motion.btn_install') || 'Установить DXVK и патч 4 ГБ ОЗУ';
+          if (isPatched) {
+            installBtn.disabled = false;
+            installBtn.removeAttribute('disabled');
+            installBtn.classList.remove('btn-disabled');
+            installBtn.title = isEn ? 'Install DXVK (32-bit) and 4GB RAM Patch to game directory' : 'Установить DXVK (32-бит) и патч 4 ГБ ОЗУ в каталог игры';
+            if (prereqBadge) {
+              prereqBadge.textContent = isEn ? 'Launcher Patched — Ready' : 'Лаунчер пропатчен — Готов к установке';
+              prereqBadge.className = 'badge badge-success font-mono';
+            }
+          } else {
+            installBtn.disabled = true;
+            installBtn.setAttribute('disabled', 'disabled');
+            installBtn.classList.add('btn-disabled');
+            installBtn.title = isEn ? 'Unpack and patch launcher first before installing DXVK' : 'Сначала необходимо распаковать и пропатчить лаунчер';
+            if (prereqBadge) {
+              prereqBadge.textContent = isEn ? 'Requires Launcher Patching' : 'Требуется предварительный патчинг лаунчера';
+              prereqBadge.className = 'badge badge-warning font-mono';
+            }
           }
         }
       }
@@ -1757,6 +2264,8 @@
       const input = document.getElementById('motionLauncherPathInput');
       const path = input ? input.value : '';
 
+      this.saveCurrentSettings();
+
       this.logToTerminal('------------------------------------------------------------', 'hint');
       this.logToTerminal(I18nManager.currentLang === 'en' ? '[START] Unpacking, computing fingerprint, and injecting SAPatcher Guard...' : '[START] Запуск распаковки, расчёта отпечатка целостности и защиты SAPatcher Guard...', 'hint');
       this.sendIpc({ action: 'patchMotionLauncher', path });
@@ -1786,13 +2295,28 @@
         });
       }
 
+      const isVerBlocked = Boolean(data?.isVersionBlocked || data?.IsVersionBlocked || res?.isVersionBlocked);
+      const hasWarning = Boolean(data?.hasCompatibilityWarning || data?.HasCompatibilityWarning || res?.hasCompatibilityWarning);
+      const warningMsg = (data && (data.versionWarningMessage || data.VersionWarningMessage)) || '';
+
       if (isOk) {
-        Toast.show(I18nManager.currentLang === 'en' ? 'Motion Launcher successfully unpacked and patched!' : 'Motion Launcher успешно распакован и пропатчен!', 5000);
+        if (hasWarning) {
+          Toast.show(I18nManager.currentLang === 'en' ? 'Motion Launcher patched (Compatibility Mode)' : 'Motion Launcher пропатчен в режиме совместимости!', 6000);
+        } else {
+          Toast.show(I18nManager.currentLang === 'en' ? 'Motion Launcher successfully unpacked and patched!' : 'Motion Launcher успешно распакован и пропатчен!', 5000);
+        }
         if (data && (data.status || data.Status)) {
           this.handlePatchStatusResult(data.status || data.Status);
         }
         this.checkPatchStatus();
       } else {
+        if (isVerBlocked) {
+          Dialogs.showError(
+            'VERSION-BLOCKED',
+            I18nManager.currentLang === 'en' ? 'LAUNCHER VERSION BLOCKED' : 'ВЕРСИЯ ЛАУНЧЕРА ЗАБЛОКИРОВАНА',
+            msg || warningMsg || 'Версия Motion Launcher устарела (< 1.2.46). Патчинг заблокирован.'
+          );
+        }
         Toast.show('Ошибка патчинга: ' + (msg || 'Неизвестная ошибка'));
       }
     },
@@ -1890,8 +2414,10 @@
         I18nManager.setLanguage(s.language);
       }
       if (s.dxvkVersion) {
-        const card = document.querySelector(`.dxvk-radio-card[data-version="${s.dxvkVersion}"]`);
-        if (card) card.click();
+        let ver = s.dxvkVersion;
+        if (ver === 'SAPatcher-DXVK 1') ver = '3.1.1';
+        const card = document.querySelector(`.dxvk-radio-card[data-version="${ver}"]`);
+        if (card && card.style.display !== 'none') card.click();
       }
       if (s.enable4gbPatch !== undefined) {
         const cb = document.getElementById('motionEnable4gbPatch');
@@ -1908,6 +2434,20 @@
       if (s.enableVsyncOff !== undefined) {
         const cb = document.getElementById('motionPresentInterval');
         if (cb) cb.checked = s.enableVsyncOff;
+      }
+      if (s.enableElectronLogging !== undefined) {
+        const cb = document.getElementById('motionEnableElectronLogging');
+        if (cb) cb.checked = s.enableElectronLogging;
+      }
+      if (s.motionLauncherUiTheme) {
+        this.currentUiTheme = s.motionLauncherUiTheme;
+        const card = document.querySelector(`.dxvk-radio-card[data-ui-theme="${s.motionLauncherUiTheme}"]`);
+        if (card) {
+          document.querySelectorAll('.dxvk-radio-card[data-ui-theme]').forEach(c => c.classList.remove('active'));
+          card.classList.add('active');
+          const radio = card.querySelector('input[type="radio"]');
+          if (radio) radio.checked = true;
+        }
       }
       if (s.enableHud !== undefined) {
         const cb = document.getElementById('motionEnableHud');
@@ -1966,14 +2506,19 @@
       const seamlessCb = document.getElementById('motionSeamless');
       const tearFreeCb = document.getElementById('motionTearFree');
       const presentIntervalCb = document.getElementById('motionPresentInterval');
+      const electronLoggingCb = document.getElementById('motionEnableElectronLogging');
+      const selectedThemeRadio = document.querySelector('input[name="motionUiTheme"]:checked');
+      const motionLauncherUiTheme = selectedThemeRadio ? selectedThemeRadio.value : (this.currentUiTheme || 'v2');
 
       const settings = {
         language: I18nManager.currentLang,
         dxvkVersion,
+        motionLauncherUiTheme,
         enable4gbPatch: laaCheckbox ? laaCheckbox.checked : true,
         enableSeamless: seamlessCb ? seamlessCb.checked : true,
         enableTearFree: tearFreeCb ? tearFreeCb.checked : true,
         enableVsyncOff: presentIntervalCb ? presentIntervalCb.checked : true,
+        enableElectronLogging: electronLoggingCb ? electronLoggingCb.checked : true,
         enableHud: hudEnableCb ? hudEnableCb.checked : false,
         hudScale: hudScaleSlider ? parseFloat(hudScaleSlider.value) : 0.75,
         hudX: hudXInput ? parseInt(hudXInput.value, 10) : 1800,
@@ -2012,11 +2557,981 @@
     }
   };
 
+  const OverlayManager = {
+    settings: {
+      overlayEnabled: true,
+      overlayHotkey: 'F11',
+      overlayHotkeyCode: 122,
+      overlayTitle: 'SAPatcher 2.0',
+      overlayShowGear: true,
+      overlayShowFps: true,
+      overlayPosition: 'top-left',
+      overlayPosX: 24,
+      overlayPosY: 24,
+      overlayScale: 1.0,
+      isSettingsOpen: false,
+      smtcVisible: true,
+      smtcScale: 1.0,
+      smtcPlaying: true,
+      smtcCurrentTrack: 0,
+      smtcCurrentSeconds: 94,
+      smtcVolume: 80
+    },
+
+    tracks: [
+      { title: "DVRST — Close Eyes", artist: "Phonk Master • Spotify", duration: 195, source: "Windows SMTC • Spotify" },
+      { title: "Kordhell — Murder In My Mind", artist: "Drift Phonk • Groove", duration: 145, source: "Windows Media • Groove" },
+      { title: "Miyagi & Andy Panda — Utopia", artist: "Hajime Records • Yandex", duration: 210, source: "Яндекс Музыка • SMTC" },
+      { title: "INTERWORLD — METAMORPHOSIS", artist: "Interworld • SoundCloud", duration: 142, source: "SoundCloud • Windows SMTC" }
+    ],
+
+    timerId: null,
+
+    init() {
+      this.bindInputs();
+      this.bindActions();
+      this.bindSmtcWidget();
+      this.bindDraggables();
+      this.startSimulatedFps();
+      this.startSmtcTimer();
+      this.updateSimPreview();
+      this.updateSmtcUI();
+    },
+
+    bindInputs() {
+      const enabledToggle = document.getElementById('overlayEnabledToggle');
+      const hotkeySelect = document.getElementById('overlayHotkeySelect');
+      const showFpsToggle = document.getElementById('overlayShowFpsToggle');
+      const positionSelect = document.getElementById('overlayPositionSelect');
+      const simGearBtn = document.getElementById('simGearBtn');
+      const simAddWidgetBtn = document.getElementById('simAddWidgetBtn');
+      const closeWidgetCatalogBtn = document.getElementById('closeWidgetCatalogBtn');
+      const btnAddSmtcWidget = document.getElementById('btnAddSmtcWidget');
+      const btnToggleSmtcWidget = document.getElementById('btnToggleSmtcWidget');
+      const widgetScaleSlider = document.getElementById('widgetScaleSlider');
+      const btnResetWidgetPos = document.getElementById('btnResetWidgetPos');
+      const linkGoToProjects = document.getElementById('linkGoToProjects');
+
+      if (enabledToggle) {
+        enabledToggle.addEventListener('change', (e) => {
+          this.settings.overlayEnabled = e.target.checked;
+          this.updateSimPreview();
+          this.log(`[OVERLAY] Оверлей ${e.target.checked ? 'включен' : 'отключен'}`);
+        });
+      }
+
+      if (hotkeySelect) {
+        hotkeySelect.addEventListener('change', (e) => {
+          this.settings.overlayHotkey = e.target.value;
+          const opt = e.target.selectedOptions[0];
+          this.settings.overlayHotkeyCode = parseInt(opt?.getAttribute('data-code') || '122', 10);
+          this.updateSimPreview();
+          this.log(`[HOTKEY] Выбрана клавиша вызова: ${this.settings.overlayHotkey} (код: 0x${this.settings.overlayHotkeyCode.toString(16)})`);
+        });
+      }
+
+      if (showFpsToggle) {
+        showFpsToggle.addEventListener('change', (e) => {
+          this.settings.overlayShowFps = e.target.checked;
+          this.updateSimPreview();
+        });
+      }
+
+      if (positionSelect) {
+        positionSelect.addEventListener('change', (e) => {
+          this.settings.overlayPosition = e.target.value;
+          const box = document.getElementById('simOverlayBox');
+          if (box) {
+            box.style.position = 'relative';
+            box.style.left = '';
+            box.style.top = '';
+            box.style.right = '';
+            box.style.bottom = '';
+            switch (e.target.value) {
+              case 'top-left':
+                box.style.alignSelf = 'flex-start';
+                this.settings.overlayPosX = 24; this.settings.overlayPosY = 24;
+                break;
+              case 'top-right':
+                box.style.alignSelf = 'flex-end';
+                this.settings.overlayPosX = 1400; this.settings.overlayPosY = 24;
+                break;
+              case 'bottom-left':
+                box.style.alignSelf = 'flex-start';
+                this.settings.overlayPosX = 24; this.settings.overlayPosY = 850;
+                break;
+              case 'bottom-right':
+                box.style.alignSelf = 'flex-end';
+                this.settings.overlayPosX = 1400; this.settings.overlayPosY = 850;
+                break;
+            }
+          }
+          this.updateSimPreview();
+        });
+      }
+
+      if (simGearBtn) {
+        simGearBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.toggleSettingsMode();
+        });
+      }
+
+      if (simAddWidgetBtn) {
+        simAddWidgetBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.toggleWidgetCatalog();
+        });
+      }
+
+      if (closeWidgetCatalogBtn) {
+        closeWidgetCatalogBtn.addEventListener('click', () => {
+          const popover = document.getElementById('widgetCatalogPopover');
+          if (popover) popover.style.display = 'none';
+        });
+      }
+
+      if (btnAddSmtcWidget) {
+        btnAddSmtcWidget.addEventListener('click', () => {
+          this.setSmtcVisible(true);
+          const popover = document.getElementById('widgetCatalogPopover');
+          if (popover) popover.style.display = 'none';
+          Toast.show('Виджет SMTC плеера добавлен на экран оверлея!');
+        });
+      }
+
+      if (btnToggleSmtcWidget) {
+        btnToggleSmtcWidget.addEventListener('click', () => {
+          this.setSmtcVisible(!this.settings.smtcVisible);
+          Toast.show(this.settings.smtcVisible ? 'Виджет SMTC добавлен' : 'Виджет SMTC удалён');
+        });
+      }
+
+      if (widgetScaleSlider) {
+        widgetScaleSlider.addEventListener('input', (e) => {
+          const scale = parseFloat(e.target.value);
+          this.setSmtcScale(scale);
+        });
+      }
+
+      if (btnResetWidgetPos) {
+        btnResetWidgetPos.addEventListener('click', () => {
+          this.resetWidgetPositions();
+          Toast.show('Расположение и масштаб виджетов сброшены');
+        });
+      }
+
+      if (linkGoToProjects) {
+        linkGoToProjects.addEventListener('click', (e) => {
+          e.preventDefault();
+          const tabBtn = document.querySelector('.nav-item[data-tab="tab-projects"]');
+          if (tabBtn) tabBtn.click();
+        });
+      }
+    },
+
+    toggleSettingsMode() {
+      this.settings.isSettingsOpen = !this.settings.isSettingsOpen;
+      const simGearBtn = document.getElementById('simGearBtn');
+      const simAddWidgetBtn = document.getElementById('simAddWidgetBtn');
+      const popover = document.getElementById('widgetCatalogPopover');
+
+      if (simGearBtn) {
+        simGearBtn.classList.toggle('active', this.settings.isSettingsOpen);
+      }
+
+      if (simAddWidgetBtn) {
+        simAddWidgetBtn.style.display = this.settings.isSettingsOpen ? 'inline-flex' : 'none';
+      }
+
+      if (!this.settings.isSettingsOpen && popover) {
+        popover.style.display = 'none';
+      }
+
+      this.log(`[OVERLAY] Режим настроек оверлея ${this.settings.isSettingsOpen ? 'ОТКРЫТ (кнопка [+] активна)' : 'ЗАКРЫТ'}`);
+    },
+
+    toggleWidgetCatalog() {
+      const popover = document.getElementById('widgetCatalogPopover');
+      if (!popover) return;
+      const isHidden = popover.style.display === 'none' || !popover.style.display;
+      popover.style.display = isHidden ? 'block' : 'none';
+    },
+
+    setSmtcVisible(visible) {
+      this.settings.smtcVisible = visible;
+      const widget = document.getElementById('simSmtcWidget');
+      const badge = document.getElementById('smtcActiveBadge');
+      const btnText = document.getElementById('btnToggleSmtcText');
+
+      if (widget) {
+        widget.style.display = visible ? 'flex' : 'none';
+      }
+      if (badge) {
+        badge.textContent = visible ? '1 активен' : '0 активно';
+        badge.className = visible ? 'badge badge-accent font-mono' : 'badge badge-muted font-mono';
+      }
+      if (btnText) {
+        btnText.textContent = visible ? 'Скрыть SMTC плеер' : '+ Добавить SMTC плеер';
+      }
+    },
+
+    setSmtcScale(scale) {
+      this.settings.smtcScale = Math.min(1.8, Math.max(0.6, scale));
+      const widget = document.getElementById('simSmtcWidget');
+      const scaleBadge = document.getElementById('smtcScaleBadge');
+      const slider = document.getElementById('widgetScaleSlider');
+      const scaleVal = document.getElementById('widgetScaleVal');
+
+      if (widget) {
+        widget.style.transform = `scale(${this.settings.smtcScale.toFixed(2)})`;
+      }
+      if (scaleBadge) {
+        scaleBadge.textContent = `${this.settings.smtcScale.toFixed(2)}x`;
+      }
+      if (slider) {
+        slider.value = this.settings.smtcScale.toFixed(2);
+      }
+      if (scaleVal) {
+        scaleVal.textContent = `${this.settings.smtcScale.toFixed(2)}x`;
+      }
+    },
+
+    resetWidgetPositions() {
+      const widget = document.getElementById('simSmtcWidget');
+      const hudBox = document.getElementById('simOverlayBox');
+      if (widget) {
+        widget.style.left = '';
+        widget.style.top = '24px';
+        widget.style.right = '24px';
+        widget.style.bottom = '';
+      }
+      if (hudBox) {
+        hudBox.style.left = '';
+        hudBox.style.top = '';
+        hudBox.style.right = '';
+        hudBox.style.bottom = '';
+        hudBox.style.position = 'relative';
+      }
+      this.setSmtcScale(1.0);
+    },
+
+    bindSmtcWidget() {
+      const closeBtn = document.getElementById('smtcWidgetCloseBtn');
+      const playBtn = document.getElementById('smtcPlayBtn');
+      const prevBtn = document.getElementById('smtcPrevBtn');
+      const nextBtn = document.getElementById('smtcNextBtn');
+      const seekBar = document.getElementById('smtcSeekBar');
+      const volSlider = document.getElementById('smtcVolSlider');
+      const resizeHandle = document.getElementById('smtcResizeHandle');
+
+      if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.setSmtcVisible(false);
+          Toast.show('Виджет SMTC удалён. Нажмите [+], чтобы вернуть.');
+        });
+      }
+
+      if (playBtn) {
+        playBtn.addEventListener('click', () => {
+          this.togglePlay();
+        });
+      }
+
+      if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+          this.settings.smtcCurrentTrack = (this.settings.smtcCurrentTrack - 1 + this.tracks.length) % this.tracks.length;
+          this.settings.smtcCurrentSeconds = 0;
+          this.updateSmtcUI();
+        });
+      }
+
+      if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+          this.settings.smtcCurrentTrack = (this.settings.smtcCurrentTrack + 1) % this.tracks.length;
+          this.settings.smtcCurrentSeconds = 0;
+          this.updateSmtcUI();
+        });
+      }
+
+      if (seekBar) {
+        seekBar.addEventListener('click', (e) => {
+          const rect = seekBar.getBoundingClientRect();
+          const clickX = e.clientX - rect.left;
+          const ratio = Math.max(0, Math.min(1, clickX / rect.width));
+          const curTrack = this.tracks[this.settings.smtcCurrentTrack];
+          this.settings.smtcCurrentSeconds = Math.floor(ratio * curTrack.duration);
+          this.updateSmtcUI();
+        });
+      }
+
+      if (volSlider) {
+        volSlider.addEventListener('input', (e) => {
+          this.settings.smtcVolume = parseInt(e.target.value, 10);
+        });
+      }
+
+      if (resizeHandle) {
+        let isResizing = false;
+        let startX = 0;
+        let startScale = 1.0;
+
+        resizeHandle.addEventListener('mousedown', (e) => {
+          e.stopPropagation();
+          isResizing = true;
+          startX = e.clientX;
+          startScale = this.settings.smtcScale;
+          document.body.style.cursor = 'se-resize';
+
+          const onMouseMove = (moveEvent) => {
+            if (!isResizing) return;
+            const deltaX = moveEvent.clientX - startX;
+            const newScale = startScale + (deltaX / 250);
+            this.setSmtcScale(newScale);
+          };
+
+          const onMouseUp = () => {
+            isResizing = false;
+            document.body.style.cursor = '';
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('mouseup', onMouseUp);
+          };
+
+          window.addEventListener('mousemove', onMouseMove);
+          window.addEventListener('mouseup', onMouseUp);
+        });
+      }
+    },
+
+    togglePlay() {
+      this.settings.smtcPlaying = !this.settings.smtcPlaying;
+      this.updateSmtcUI();
+    },
+
+    startSmtcTimer() {
+      if (this.timerId) clearInterval(this.timerId);
+      this.timerId = setInterval(() => {
+        if (!this.settings.smtcPlaying) return;
+        const curTrack = this.tracks[this.settings.smtcCurrentTrack];
+        this.settings.smtcCurrentSeconds++;
+        if (this.settings.smtcCurrentSeconds >= curTrack.duration) {
+          this.settings.smtcCurrentSeconds = 0;
+          this.settings.smtcCurrentTrack = (this.settings.smtcCurrentTrack + 1) % this.tracks.length;
+        }
+        this.updateSmtcUI();
+      }, 1000);
+    },
+
+    formatTime(sec) {
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+    },
+
+    updateSmtcUI() {
+      const curTrack = this.tracks[this.settings.smtcCurrentTrack];
+      const titleEl = document.getElementById('smtcTrackTitle');
+      const artistEl = document.getElementById('smtcTrackArtist');
+      const sourceEl = document.getElementById('smtcSourceText');
+      const curTimeEl = document.getElementById('smtcTimeCurrent');
+      const totalTimeEl = document.getElementById('smtcTimeTotal');
+      const seekFill = document.getElementById('smtcSeekFill');
+      const visualizer = document.getElementById('smtcVisualizer');
+      const playIcon = document.getElementById('smtcPlayIcon');
+
+      if (titleEl) titleEl.textContent = curTrack.title;
+      if (artistEl) artistEl.textContent = curTrack.artist;
+      if (sourceEl) sourceEl.textContent = curTrack.source;
+      if (curTimeEl) curTimeEl.textContent = this.formatTime(this.settings.smtcCurrentSeconds);
+      if (totalTimeEl) totalTimeEl.textContent = this.formatTime(curTrack.duration);
+
+      if (seekFill) {
+        const pct = ((this.settings.smtcCurrentSeconds / curTrack.duration) * 100).toFixed(1);
+        seekFill.style.width = `${pct}%`;
+      }
+
+      if (visualizer) {
+        visualizer.classList.toggle('playing', this.settings.smtcPlaying);
+      }
+
+      if (playIcon) {
+        if (this.settings.smtcPlaying) {
+          playIcon.innerHTML = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
+        } else {
+          playIcon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
+        }
+      }
+    },
+
+    bindDraggables() {
+      const bg = document.getElementById('simGameBg');
+      const hudBox = document.getElementById('simOverlayBox');
+      const smtc = document.getElementById('simSmtcWidget');
+      if (!bg) return;
+
+      const makeDraggable = (el) => {
+        if (!el) return;
+        let isDragging = false;
+        let startX = 0, startY = 0;
+        let origLeft = 0, origTop = 0;
+
+        el.addEventListener('mousedown', (e) => {
+          if (['BUTTON', 'INPUT', 'SELECT', 'A'].includes(e.target.tagName)) return;
+          if (e.target.classList.contains('widget-resize-handle')) return;
+
+          isDragging = true;
+          const bgRect = bg.getBoundingClientRect();
+          const elRect = el.getBoundingClientRect();
+
+          startX = e.clientX;
+          startY = e.clientY;
+          origLeft = elRect.left - bgRect.left;
+          origTop = elRect.top - bgRect.top;
+
+          el.style.position = 'absolute';
+          el.style.left = `${origLeft}px`;
+          el.style.top = `${origTop}px`;
+          el.style.right = 'auto';
+          el.style.bottom = 'auto';
+          el.style.margin = '0';
+          el.style.zIndex = '60';
+
+          const onMouseMove = (moveEvent) => {
+            if (!isDragging) return;
+            const dx = moveEvent.clientX - startX;
+            const dy = moveEvent.clientY - startY;
+            const maxW = bg.clientWidth - (el.offsetWidth * (el === smtc ? this.settings.smtcScale : 1.0));
+            const maxH = bg.clientHeight - (el.offsetHeight * (el === smtc ? this.settings.smtcScale : 1.0));
+
+            const newX = Math.max(0, Math.min(maxW, origLeft + dx));
+            const newY = Math.max(0, Math.min(maxH, origTop + dy));
+
+            el.style.left = `${newX}px`;
+            el.style.top = `${newY}px`;
+          };
+
+          const onMouseUp = () => {
+            isDragging = false;
+            el.style.zIndex = el === smtc ? '50' : '40';
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('mouseup', onMouseUp);
+          };
+
+          window.addEventListener('mousemove', onMouseMove);
+          window.addEventListener('mouseup', onMouseUp);
+        });
+      };
+
+      makeDraggable(hudBox);
+      makeDraggable(smtc);
+    },
+
+    bindActions() {
+      const syncBtn = document.getElementById('btnSyncOverlay');
+      const saveBtn = document.getElementById('btnSaveOverlaySettings');
+      const clearBtn = document.getElementById('overlayClearLogBtn');
+
+      if (syncBtn) {
+        syncBtn.addEventListener('click', () => this.syncIpc());
+      }
+      if (saveBtn) {
+        saveBtn.addEventListener('click', () => this.saveSettings());
+      }
+      if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+          const log = document.getElementById('overlayTerminalLog');
+          if (log) log.innerHTML = '';
+        });
+      }
+    },
+
+    updateSimPreview() {
+      const simBox = document.getElementById('simOverlayBox');
+      const simTitle = document.getElementById('simOverlayTitle');
+      const simFpsRow = document.getElementById('simFpsRow');
+      const simHotkey = document.getElementById('simHotkeyVal');
+
+      if (simTitle) simTitle.textContent = (this.hasVulkan === false) ? 'SAPatcher 2.0 (D3D9 Only)' : (this.settings.overlayTitle || 'SAPatcher 2.0');
+      if (simFpsRow) simFpsRow.style.display = this.settings.overlayShowFps ? 'block' : 'none';
+      if (simHotkey) simHotkey.textContent = this.settings.overlayHotkey || 'F11';
+      if (simBox) {
+        simBox.style.opacity = this.settings.overlayEnabled ? '1' : '0.4';
+      }
+    },
+
+    startSimulatedFps() {
+      setInterval(() => {
+        const fpsVal = document.getElementById('simFpsVal');
+        if (fpsVal && this.settings.overlayShowFps) {
+          const fps = (143.5 + Math.random() * 1.5).toFixed(1);
+          fpsVal.textContent = fps;
+        }
+      }, 700);
+    },
+
+    syncIpc() {
+      this.sendIpcMessage({ action: 'syncOverlayIpc' });
+      Toast.show(I18nManager.get('toast.overlay_synced'));
+      this.log(`[SYNC] Синхронизировано: hotkey=${this.settings.overlayHotkey}, title=${this.settings.overlayTitle}`);
+    },
+
+    saveSettings() {
+      this.sendIpcMessage({
+        action: 'saveSettings',
+        settings: {
+          overlayEnabled: this.settings.overlayEnabled,
+          overlayHotkey: this.settings.overlayHotkey,
+          overlayHotkeyCode: this.settings.overlayHotkeyCode,
+          overlayTitle: 'SAPatcher 2.0',
+          overlayShowGear: true,
+          overlayShowFps: this.settings.overlayShowFps,
+          overlayPosition: this.settings.overlayPosition,
+          overlayPosX: this.settings.overlayPosX,
+          overlayPosY: this.settings.overlayPosY,
+          overlayScale: this.settings.overlayScale
+        }
+      });
+      Toast.show(I18nManager.get('toast.overlay_synced'));
+      this.log(`[SAVE] Настройки сохранены и переданы в Shared Memory.`);
+    },
+
+    applyLoadedSettings(data) {
+      if (!data) return;
+      if (data.overlayEnabled !== undefined) this.settings.overlayEnabled = data.overlayEnabled;
+      if (data.overlayHotkey) this.settings.overlayHotkey = data.overlayHotkey;
+      if (data.overlayHotkeyCode) this.settings.overlayHotkeyCode = data.overlayHotkeyCode;
+      if (data.overlayShowFps !== undefined) this.settings.overlayShowFps = data.overlayShowFps;
+      if (data.overlayPosition) this.settings.overlayPosition = data.overlayPosition;
+      if (data.overlayPosX !== undefined) this.settings.overlayPosX = data.overlayPosX;
+      if (data.overlayPosY !== undefined) this.settings.overlayPosY = data.overlayPosY;
+
+      const enabledToggle = document.getElementById('overlayEnabledToggle');
+      const hotkeySelect = document.getElementById('overlayHotkeySelect');
+      const showFpsToggle = document.getElementById('overlayShowFpsToggle');
+      const positionSelect = document.getElementById('overlayPositionSelect');
+
+      if (enabledToggle) enabledToggle.checked = this.settings.overlayEnabled;
+      if (hotkeySelect) hotkeySelect.value = this.settings.overlayHotkey;
+      if (showFpsToggle) showFpsToggle.checked = this.settings.overlayShowFps;
+      if (positionSelect) positionSelect.value = this.settings.overlayPosition;
+
+      this.updateSimPreview();
+    },
+
+    sendIpcMessage(payload) {
+      const msg = JSON.stringify(payload);
+      try {
+        if (window.external && typeof window.external.sendMessage === 'function') {
+          window.external.sendMessage(msg);
+        } else if (window.chrome && window.chrome.webview && typeof window.chrome.webview.postMessage === 'function') {
+          window.chrome.webview.postMessage(msg);
+        }
+      } catch (e) {
+        console.error('IPC message failed', e);
+      }
+    },
+
+    log(msg, type = 'info') {
+      const term = document.getElementById('overlayTerminalLog');
+      if (!term) return;
+      const line = document.createElement('div');
+      line.className = `log-line log-line--${type}`;
+      line.textContent = msg;
+      term.appendChild(line);
+      term.scrollTop = term.scrollHeight;
+    },
+
+    updateGpuVulkanState(hasVulkan) {
+      this.hasVulkan = hasVulkan;
+      const notice = document.getElementById('overlayGpuNotice');
+      const simBox = document.getElementById('simOverlayBox');
+      const simTitle = document.getElementById('simOverlayTitle');
+      const simWatermark = document.querySelector('.overlay-sim-watermark');
+      const statusText = document.getElementById('overlayStatusText');
+      const statusDot = document.getElementById('overlayStatusDot');
+      const enabledToggle = document.getElementById('overlayEnabledToggle');
+      const saveBtn = document.getElementById('btnSaveOverlaySettings');
+      const syncBtn = document.getElementById('btnSyncOverlay');
+      const simFpsRow = document.getElementById('simFpsRow');
+      const subRow = document.querySelector('.overlay-sim-sub');
+
+      if (!hasVulkan) {
+        if (notice) notice.style.display = 'flex';
+        if (simBox) {
+          simBox.style.opacity = '0.35';
+          simBox.style.pointerEvents = 'none';
+        }
+        if (simTitle) simTitle.textContent = 'SAPatcher 2.0 (D3D9 Only)';
+        if (statusText) {
+          statusText.textContent = 'Vulkan Недоступно • Отключен';
+          statusText.style.color = '#f43f5e';
+        }
+        if (statusDot) {
+          statusDot.className = 'status-dot-inline status-dot--error';
+        }
+        if (enabledToggle) {
+          enabledToggle.checked = false;
+          enabledToggle.disabled = true;
+        }
+        if (saveBtn) {
+          saveBtn.disabled = true;
+          saveBtn.classList.add('btn-disabled');
+          saveBtn.title = 'Оверлей заблокирован: видеокарта не поддерживает Vulkan API';
+        }
+        if (syncBtn) {
+          syncBtn.disabled = true;
+          syncBtn.classList.add('btn-disabled');
+          syncBtn.title = 'Синхронизация недоступна без поддержки Vulkan';
+        }
+        if (simWatermark) {
+          simWatermark.textContent = 'Grand Theft Auto: San Andreas (DirectX 9 Native • Оверлей заблокирован: нет Vulkan)';
+        }
+        if (simFpsRow) {
+          simFpsRow.innerHTML = '<span class="text-rose font-bold">Оверлей не поддерживается на текущем GPU</span>';
+        }
+        if (subRow) {
+          subRow.innerHTML = '<span class="text-rose">Vulkan Не поддерживается</span> <span class="text-muted font-mono">| DXVK оверлей недоступен</span>';
+        }
+      } else {
+        if (notice) notice.style.display = 'none';
+        if (simBox) {
+          simBox.style.opacity = this.settings.overlayEnabled ? '1' : '0.4';
+          simBox.style.pointerEvents = 'auto';
+        }
+        if (simTitle) simTitle.textContent = 'SAPatcher 2.0';
+        if (statusText) {
+          statusText.textContent = 'Vulkan HUD • Активен';
+          statusText.style.color = '';
+        }
+        if (statusDot) {
+          statusDot.className = 'status-dot-inline status-dot--ready';
+        }
+        if (enabledToggle) {
+          enabledToggle.disabled = false;
+        }
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.classList.remove('btn-disabled');
+          saveBtn.title = '';
+        }
+        if (syncBtn) {
+          syncBtn.disabled = false;
+          syncBtn.classList.remove('btn-disabled');
+          syncBtn.title = '';
+        }
+        if (simWatermark) {
+          simWatermark.textContent = 'Grand Theft Auto: San Andreas (DirectX 9 → Vulkan via DXVK 3.1.1)';
+        }
+        if (simFpsRow) {
+          simFpsRow.innerHTML = 'FPS: <span class="text-cyan font-bold" id="simFpsVal">144.2</span> (6.93 ms)';
+        }
+        if (subRow) {
+          subRow.innerHTML = '<span class="text-emerald">Vulkan D3D9 Active</span> <span class="text-muted font-mono">| DXVK 3.1.1</span>';
+        }
+      }
+    }
+  };
+
+  const StandaloneLaaManager = {
+    currentFilePath: '',
+    lastInspection: null,
+
+    init() {
+      const btnBrowse = document.getElementById('btnBrowseStandaloneExe');
+      if (btnBrowse) {
+        btnBrowse.addEventListener('click', () => {
+          this.logToTerminal('[BROWSE] Открытие диалога выбора исполняемого файла .exe...', 'info');
+          this.sendIpc({ action: 'browseAnyExeFile', currentPath: this.currentFilePath });
+        });
+      }
+
+      const btnMotion = document.getElementById('btnQuickSelectMotion');
+      if (btnMotion) {
+        btnMotion.addEventListener('click', () => this.selectQuickExe('motion.exe'));
+      }
+
+      const btnSamp = document.getElementById('btnQuickSelectSamp');
+      if (btnSamp) {
+        btnSamp.addEventListener('click', () => this.selectQuickExe('samp.exe'));
+      }
+
+      const btnGtaSa = document.getElementById('btnQuickSelectGtaSa');
+      if (btnGtaSa) {
+        btnGtaSa.addEventListener('click', () => this.selectQuickExe('gta_sa.exe'));
+      }
+
+      const btnReload = document.getElementById('btnQuickInspectReload');
+      if (btnReload) {
+        btnReload.addEventListener('click', () => {
+          if (this.currentFilePath) {
+            this.inspectExe(this.currentFilePath);
+          } else {
+            Toast.show('Сначала выберите .exe файл для проверки', 3000);
+          }
+        });
+      }
+
+      const btnApply = document.getElementById('btnApplyStandaloneLaa');
+      if (btnApply) {
+        btnApply.addEventListener('click', () => {
+          if (!this.currentFilePath) {
+            Toast.show('Выберите .exe файл для применения патча!', 3000);
+            return;
+          }
+          this.logToTerminal(`[4GB_PATCH] Запуск применения флага LAA к: ${this.currentFilePath}`, 'detect');
+          btnApply.disabled = true;
+          this.sendIpc({ action: 'applyStandaloneLaa', filePath: this.currentFilePath });
+        });
+      }
+
+      const btnRestore = document.getElementById('btnRestoreStandaloneLaa');
+      if (btnRestore) {
+        btnRestore.addEventListener('click', () => {
+          if (!this.currentFilePath) return;
+          this.logToTerminal(`[BACKUP_RESTORE] Восстановление из .Backup для: ${this.currentFilePath}`, 'warn');
+          btnRestore.disabled = true;
+          this.sendIpc({ action: 'restoreStandaloneExeBackup', filePath: this.currentFilePath });
+        });
+      }
+
+      const btnLaunch = document.getElementById('btnLaunchStandaloneExe');
+      if (btnLaunch) {
+        btnLaunch.addEventListener('click', () => {
+          if (!this.currentFilePath) return;
+          this.logToTerminal(`[PROCESS] Запуск приложения: ${this.currentFilePath}`, 'info');
+          this.sendIpc({ action: 'launchStandaloneExe', filePath: this.currentFilePath });
+        });
+      }
+
+      const btnClear = document.getElementById('standaloneClearLogBtn');
+      if (btnClear) {
+        btnClear.addEventListener('click', () => {
+          const logBox = document.getElementById('standaloneTerminalLog');
+          if (logBox) logBox.innerHTML = '';
+        });
+      }
+    },
+
+    onTabOpened() {
+      if (!this.currentFilePath) {
+        const gamePath = (typeof MotionProjectManager !== 'undefined' && MotionProjectManager.detectedGamePath) || 'c:\\games\\motion\\motion project';
+        if (gamePath) {
+          const defaultMotion = gamePath.replace(/[\\/]+$/, '') + '\\motion.exe';
+          this.inspectExe(defaultMotion);
+        }
+      }
+    },
+
+    updateVulkanState(hasVulkan) {
+      if (!hasVulkan) {
+        this.logToTerminal('[SYSTEM] Видеокарта не поддерживает Vulkan API. Режим оверлея и DXVK заблокирован. Доступен автономный LAA 4 ГБ патчер.', 'warn');
+      }
+    },
+
+    selectQuickExe(exeName) {
+      const gamePath = (typeof MotionProjectManager !== 'undefined' && MotionProjectManager.detectedGamePath) || 'c:\\games\\motion\\motion project';
+      const cleanPath = gamePath.replace(/[\\/]+$/, '');
+      const fullPath = `${cleanPath}\\${exeName}`;
+      this.inspectExe(fullPath);
+    },
+
+    inspectExe(filePath) {
+      if (!filePath) return;
+      this.logToTerminal(`[INSPECT] Проверка структуры PE заголовка: ${filePath}...`, 'info');
+      this.sendIpc({ action: 'inspectStandaloneExe', filePath: filePath });
+    },
+
+    onExeSelected(data) {
+      const inspection = data.inspection || data;
+      this.updateInspectionUi(inspection);
+      this.logToTerminal(`[SELECT] Выбран файл: ${inspection.filePath} (${inspection.fileSizeFormatted || 'N/A'})`, 'success');
+      Toast.show('Файл выбран для LAA анализа', 3000);
+    },
+
+    onExeInspected(data) {
+      const inspection = data.inspection || data;
+      this.updateInspectionUi(inspection);
+      if (inspection.exists) {
+        const laaText = inspection.isLaaActive ? 'АКТИВЕН (4 ГБ)' : 'НЕ АКТИВЕН (Лимит 2 ГБ)';
+        this.logToTerminal(`[INSPECT_DONE] ${inspection.fileName} -> LAA: ${laaText} | PE offset: 0x${(inspection.peOffset || 0).toString(16).toUpperCase()}`, inspection.isLaaActive ? 'success' : 'warn');
+      } else {
+        this.logToTerminal(`[INSPECT_ERROR] ${inspection.message || 'Файл не найден'}`, 'error');
+      }
+    },
+
+    onApplyResult(data) {
+      const btnApply = document.getElementById('btnApplyStandaloneLaa');
+      if (btnApply) btnApply.disabled = false;
+
+      if (data.success) {
+        Toast.show(data.message || 'Патч 4 ГБ ОЗУ успешно установлен!', 4500);
+        this.logToTerminal(`[SUCCESS] ${data.message}`, 'success');
+      } else {
+        Toast.show(data.message || 'Ошибка применения LAA патча!', 4500);
+        this.logToTerminal(`[ERROR] ${data.message}`, 'error');
+      }
+
+      if (data.inspection) {
+        this.updateInspectionUi(data.inspection);
+      }
+    },
+
+    onRestoreResult(data) {
+      const btnRestore = document.getElementById('btnRestoreStandaloneLaa');
+      if (btnRestore) btnRestore.disabled = false;
+
+      if (data.success) {
+        Toast.show(data.message || 'Файл восстановлен из резервной копии!', 4000);
+        this.logToTerminal(`[RESTORE_OK] ${data.message}`, 'success');
+      } else {
+        Toast.show(data.message || 'Ошибка восстановления из бэкапа', 4000);
+        this.logToTerminal(`[RESTORE_ERROR] ${data.message}`, 'error');
+      }
+
+      if (data.inspection) {
+        this.updateInspectionUi(data.inspection);
+      }
+    },
+
+    onLaunchResult(data) {
+      if (data.success) {
+        Toast.show(data.message || 'Приложение запущено!', 3500);
+        this.logToTerminal(`[LAUNCH_OK] ${data.message}`, 'success');
+      } else {
+        Toast.show(data.message || 'Ошибка запуска приложения', 4000);
+        this.logToTerminal(`[LAUNCH_ERROR] ${data.message}`, 'error');
+      }
+    },
+
+    updateInspectionUi(insp) {
+      if (!insp) return;
+      this.lastInspection = insp;
+      this.currentFilePath = insp.filePath || '';
+
+      const inputPath = document.getElementById('standaloneExePath');
+      if (inputPath) inputPath.value = insp.filePath || '';
+
+      const elName = document.getElementById('standaloneInspectFileName');
+      if (elName) elName.textContent = insp.fileName || (insp.exists ? insp.filePath : 'Файл не найден');
+
+      const elSize = document.getElementById('standaloneInspectFileSize');
+      if (elSize) elSize.textContent = insp.fileSizeFormatted || (insp.fileSizeBytes ? `${insp.fileSizeBytes} B` : '—');
+
+      const elPeOffset = document.getElementById('standaloneInspectPeOffset');
+      if (elPeOffset) elPeOffset.textContent = insp.peOffset ? `0x${insp.peOffset.toString(16).toUpperCase()} (${insp.peOffset})` : '—';
+
+      const elLaa = document.getElementById('standaloneInspectLaaFlag');
+      if (elLaa) {
+        if (!insp.exists) {
+          elLaa.innerHTML = '<span class="text-muted">Недоступно</span>';
+        } else if (insp.isLaaActive) {
+          elLaa.innerHTML = '<span class="text-emerald" style="font-weight:700;">АКТИВЕН (0x0020)</span>';
+        } else {
+          elLaa.innerHTML = '<span class="text-amber" style="font-weight:700;">ОТСУТСТВУЕТ (2 ГБ)</span>';
+        }
+      }
+
+      const elChecksum = document.getElementById('standaloneInspectChecksum');
+      if (elChecksum) elChecksum.textContent = insp.checksum ? `0x${insp.checksum.toString(16).toUpperCase()}` : '—';
+
+      const elBackup = document.getElementById('standaloneInspectBackupStatus');
+      if (elBackup) {
+        if (insp.backupExists) {
+          elBackup.innerHTML = `<span class="text-emerald">Создан (${insp.backupSizeFormatted || 'OK'})</span>`;
+        } else {
+          elBackup.innerHTML = '<span class="text-muted">Отсутствует</span>';
+        }
+      }
+
+      const msgBox = document.getElementById('standaloneInspectMessageBox');
+      if (msgBox) {
+        msgBox.textContent = insp.message || '';
+        if (insp.isLaaActive) {
+          msgBox.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+          msgBox.style.color = '#10b981';
+        } else if (insp.exists) {
+          msgBox.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+          msgBox.style.color = '#f59e0b';
+        } else {
+          msgBox.style.borderColor = 'rgba(244, 63, 94, 0.4)';
+          msgBox.style.color = '#f43f5e';
+        }
+      }
+
+      const badge = document.getElementById('standaloneLaaStatusBadge');
+      if (badge) {
+        if (!insp.exists) {
+          badge.className = 'badge badge-danger font-mono';
+          badge.textContent = 'ФАЙЛ НЕ НАЙДЕН';
+        } else if (insp.isLaaActive) {
+          badge.className = 'badge badge-success font-mono';
+          badge.textContent = '✓ АКТИВЕН 4 ГБ';
+        } else {
+          badge.className = 'badge badge-warning font-mono';
+          badge.textContent = '⚠️ ЛИМИТ 2 ГБ';
+        }
+      }
+
+      const btnApply = document.getElementById('btnApplyStandaloneLaa');
+      if (btnApply) {
+        btnApply.disabled = !insp.exists;
+        const btnText = btnApply.querySelector('.btn-text');
+        if (btnText) {
+          btnText.textContent = insp.isLaaActive ? 'Обновить 4 ГБ ОЗУ (LAA)' : 'Пропатчить 4 ГБ ОЗУ (LAA)';
+        }
+      }
+
+      const btnRestore = document.getElementById('btnRestoreStandaloneLaa');
+      if (btnRestore) {
+        btnRestore.disabled = !insp.backupExists;
+      }
+
+      const btnLaunch = document.getElementById('btnLaunchStandaloneExe');
+      if (btnLaunch) {
+        btnLaunch.disabled = !insp.exists;
+      }
+    },
+
+    logToTerminal(text, type = 'info') {
+      const box = document.getElementById('standaloneTerminalLog');
+      if (!box) return;
+
+      const line = document.createElement('div');
+      let cssClass = 'log-line--info';
+      if (type === 'success') cssClass = 'log-line--success';
+      else if (type === 'warn') cssClass = 'log-line--warn';
+      else if (type === 'error') cssClass = 'log-line--error';
+      else if (type === 'detect') cssClass = 'log-line--detect';
+      else if (type === 'hint') cssClass = 'log-line--hint';
+
+      line.className = `log-line ${cssClass}`;
+      line.textContent = text;
+      box.appendChild(line);
+      box.scrollTop = box.scrollHeight;
+    },
+
+    sendIpc(obj) {
+      const s = JSON.stringify(obj);
+      if (window.external && typeof window.external.sendMessage === 'function') {
+        window.external.sendMessage(s);
+        return true;
+      } else if (window.chrome && window.chrome.webview && typeof window.chrome.webview.postMessage === 'function') {
+        window.chrome.webview.postMessage(s);
+        return true;
+      }
+      return false;
+    }
+  };
+
   const Navigation = {
     init() {
       const navItems = document.querySelectorAll('.nav-item');
       navItems.forEach((btn) => {
         btn.addEventListener('click', () => {
+          if (btn.hasAttribute('disabled') || btn.style.pointerEvents === 'none') {
+            return;
+          }
           const targetTab = btn.getAttribute('data-tab');
           if (!targetTab) return;
 
@@ -2036,6 +3551,10 @@
             });
             if (targetTab === 'tab-projects') {
               MotionProjectManager.detectLauncher();
+            } else if (targetTab === 'tab-overlay') {
+              OverlayManager.updateSimPreview();
+            } else if (targetTab === 'tab-standalone-laa') {
+              StandaloneLaaManager.onTabOpened();
             }
           }
         });
@@ -2061,6 +3580,207 @@
     }
   };
 
+  const DeveloperModeManager = {
+    isActive: false,
+    hwAllowed: false,
+    hwSummary: '',
+    pressedKeys: new Set(),
+
+    init() {
+      this.bindKeys();
+      this.bindDialog();
+      this.bindBadge();
+    },
+
+    bindKeys() {
+      window.addEventListener('keydown', (e) => {
+        if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+
+        this.pressedKeys.add(e.code);
+
+        const isD = this.pressedKeys.has('KeyD');
+        const isE = this.pressedKeys.has('KeyE');
+        const isU = this.pressedKeys.has('KeyU');
+
+        if (isD && isE && isU) {
+          const activePanel = document.querySelector('.settings-panel.active');
+          if (activePanel && activePanel.id === 'tab-projects') {
+            this.openDialog();
+          }
+        }
+      });
+
+      window.addEventListener('keyup', (e) => {
+        this.pressedKeys.delete(e.code);
+      });
+    },
+
+    bindDialog() {
+      const dialog = document.getElementById('developerModeDialog');
+      const cancelBtn = document.getElementById('devModeCancelBtn');
+      const unlockBtn = document.getElementById('devModeUnlockBtn');
+      const pwdInput = document.getElementById('devModePasswordInput');
+
+      if (cancelBtn && dialog) {
+        cancelBtn.addEventListener('click', () => dialog.close());
+      }
+
+      if (unlockBtn && pwdInput) {
+        unlockBtn.addEventListener('click', () => this.submitUnlock());
+      }
+
+      if (pwdInput) {
+        pwdInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            this.submitUnlock();
+          }
+        });
+      }
+    },
+
+    bindBadge() {
+      const badge = document.getElementById('projectsDevModeBadge');
+      if (badge) {
+        badge.addEventListener('click', () => {
+          if (this.isActive) {
+            Dialogs.showConfirm(
+              'Включение защиты',
+              'Отключить режим разработчика и вернуть стандартную защиту папки игры и античит?',
+              () => {
+                this.sendIpc({ action: 'toggleDeveloperMode', enable: false });
+                Toast.show('Режим разработчика деактивирован. Защита включена.');
+              }
+            );
+          }
+        });
+      }
+    },
+
+    openDialog() {
+      const dialog = document.getElementById('developerModeDialog');
+      const titleEl = document.getElementById('developerModeDialogTitle');
+      const descEl = document.getElementById('developerModeDialogDesc');
+      const btnTextEl = document.getElementById('devModeUnlockBtnText');
+      const pwdInput = document.getElementById('devModePasswordInput');
+      if (pwdInput) pwdInput.value = '';
+
+      if (this.isActive) {
+        if (titleEl) titleEl.textContent = 'Включение защиты (Выход из Dev Mode)';
+        if (descEl) descEl.textContent = 'Защита в данный момент ОТКЛЮЧЕНА (Dev Mode активен). Введите пароль разработчика для включения защиты.';
+        if (btnTextEl) btnTextEl.textContent = 'Включить защиту';
+      } else {
+        if (titleEl) titleEl.textContent = 'Режим разработчика (Dev Mode)';
+        if (descEl) descEl.textContent = 'Аппаратная аутентификация для отключения систем защиты и античита игры.';
+        if (btnTextEl) btnTextEl.textContent = 'Разблокировать';
+      }
+
+      this.sendIpc({ action: 'checkDeveloperStatus' });
+      if (dialog && typeof dialog.showModal === 'function') {
+        dialog.showModal();
+        if (pwdInput) pwdInput.focus();
+      }
+    },
+
+    submitUnlock() {
+      const pwdInput = document.getElementById('devModePasswordInput');
+      const pwd = pwdInput ? pwdInput.value.trim() : '';
+      if (!pwd) {
+        Toast.show('Введите ключ доступа разработчика');
+        return;
+      }
+
+      this.sendIpc({ action: 'unlockDeveloperMode', password: pwd });
+    },
+
+    onStatus(data) {
+      if (!data) return;
+      this.isActive = !!data.active;
+      this.hwAllowed = !!data.hwAllowed;
+      this.hwSummary = data.hwSummary || '';
+
+      const badge = document.getElementById('projectsDevModeBadge');
+      if (badge) {
+        badge.style.display = this.isActive ? 'inline-flex' : 'none';
+      }
+
+      const titleEl = document.getElementById('developerModeDialogTitle');
+      const descEl = document.getElementById('developerModeDialogDesc');
+      const btnTextEl = document.getElementById('devModeUnlockBtnText');
+      if (this.isActive) {
+        if (titleEl) titleEl.textContent = 'Включение защиты (Выход из Dev Mode)';
+        if (descEl) descEl.textContent = 'Защита в данный момент ОТКЛЮЧЕНА (Dev Mode активен). Введите пароль разработчика для включения защиты.';
+        if (btnTextEl) btnTextEl.textContent = 'Включить защиту';
+      } else {
+        if (titleEl) titleEl.textContent = 'Режим разработчика (Dev Mode)';
+        if (descEl) descEl.textContent = 'Аппаратная аутентификация для отключения систем защиты и античита игры.';
+        if (btnTextEl) btnTextEl.textContent = 'Разблокировать';
+      }
+
+      const hwInfo = document.getElementById('devHwInfoText');
+      if (hwInfo && this.hwSummary) {
+        hwInfo.textContent = this.hwSummary;
+      }
+
+      const hwStatus = document.getElementById('devHwStatusTag');
+      if (hwStatus) {
+        if (this.hwAllowed) {
+          hwStatus.textContent = '✓ Материнская плата авторизована (MPG B550 GAMING PLUS)';
+          hwStatus.className = 'text-emerald';
+        } else {
+          hwStatus.textContent = '✕ Оборудование не авторизовано';
+          hwStatus.className = 'text-amber';
+        }
+      }
+
+      const devGpuBar = document.getElementById('devGpuMockBar');
+      if (devGpuBar && this.isActive) {
+        devGpuBar.style.display = 'flex';
+      }
+    },
+
+    onUnlockResult(data) {
+      if (!data) return;
+      if (data.success) {
+        const dialog = document.getElementById('developerModeDialog');
+        if (dialog) dialog.close();
+
+        this.isActive = !!data.active;
+        const badge = document.getElementById('projectsDevModeBadge');
+        if (badge) {
+          badge.style.display = this.isActive ? 'inline-flex' : 'none';
+        }
+
+        const devGpuBar = document.getElementById('devGpuMockBar');
+        if (devGpuBar) {
+          devGpuBar.style.display = this.isActive ? 'flex' : 'none';
+        }
+
+        if (data.toggled === 'off' || !this.isActive) {
+          Toast.show(data.message || 'Режим разработчика выключен. Защита включена!', 4500);
+          MotionProjectManager.logToTerminal('[DEV_MODE] Режим разработчика деактивирован. Защита лаунчера и игры включена.', 'info');
+        } else {
+          Toast.show(data.message || 'Режим разработчика активирован! Защита отключена.', 5000);
+          MotionProjectManager.logToTerminal('[DEV_MODE] Режим разработчика активен. Защита папки игры и античит отключены.', 'success');
+          MotionProjectManager.logToTerminal('[DEV_MODE] Авторизованное оборудование: ' + (data.hwSummary || 'MPG B550 GAMING PLUS'), 'hint');
+        }
+      } else {
+        Toast.show(data.message || 'Ошибка активации режима разработчика', 4000);
+      }
+    },
+
+    sendIpc(obj) {
+      const s = JSON.stringify(obj);
+      if (window.external && typeof window.external.sendMessage === 'function') {
+        window.external.sendMessage(s);
+        return true;
+      } else if (window.chrome && window.chrome.webview && typeof window.chrome.webview.postMessage === 'function') {
+        window.chrome.webview.postMessage(s);
+        return true;
+      }
+      return false;
+    }
+  };
+
   document.addEventListener('DOMContentLoaded', () => {
     CanvasConstellation.init();
     Toast.init();
@@ -2068,6 +3788,9 @@
     Diagnostics.init();
     Navigation.init();
     MotionProjectManager.init();
+    OverlayManager.init();
+    StandaloneLaaManager.init();
+    DeveloperModeManager.init();
     Theme.init();
     I18nManager.init();
 

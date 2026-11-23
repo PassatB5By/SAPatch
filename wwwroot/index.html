@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SAPatcher</title>
+  <title>SAPatcher 2.0</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
@@ -35,7 +35,7 @@
           </svg>
           <div class="brand-meta">
             <span class="brand-name">SAPatcher</span>
-            <span class="brand-badge font-mono">v1.0.0</span>
+            <span class="brand-badge font-mono">v2.0</span>
           </div>
         </div>
         <p class="brand-desc" data-i18n="app.slogan">A utility that changes the course of the game on modern PCs in the old GTA SA</p>
@@ -87,6 +87,30 @@
           <span class="nav-label" data-i18n="nav.projects">Патчинг проектов</span>
           <span class="badge badge-active font-mono" id="navProjectsBadge" data-i18n="nav.projects_badge">LIVE</span>
         </button>
+
+        <button type="button" class="nav-item" data-tab="tab-overlay" id="navOverlay">
+          <div class="nav-item-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </div>
+          <span class="nav-label" data-i18n="nav.overlay">Оверлей</span>
+          <span class="badge badge-cyan font-mono" id="navOverlayBadge" data-i18n="nav.overlay_badge">DXVK</span>
+        </button>
+
+        <button type="button" class="nav-item" data-tab="tab-standalone-laa" id="navStandaloneLaa" style="display: none;">
+          <div class="nav-item-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+              <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+              <line x1="6" y1="6" x2="6.01" y2="6"/>
+              <line x1="6" y1="18" x2="6.01" y2="18"/>
+            </svg>
+          </div>
+          <span class="nav-label" data-i18n="nav.standalone_laa">Патч 4 ГБ ОЗУ</span>
+          <span class="badge badge-emerald font-mono" id="navStandaloneLaaBadge" data-i18n="nav.standalone_laa_badge">4GB LAA</span>
+        </button>
       </nav>
 
       <div class="settings-nav-footer">
@@ -125,8 +149,8 @@
           </div>
           <div class="panel-header-actions">
             <div class="status-indicator">
-              <span class="status-dot-inline status-dot--ready" id="systemStatusDot"></span>
-              <span class="status-text font-mono" id="systemStatusText" data-i18n="diagnostics.ready_status">Система готова к диагностике</span>
+              <span class="status-dot-inline status-dot--scanning" id="systemStatusDot"></span>
+              <span class="status-text font-mono" id="systemStatusText">Сбор данных...</span>
             </div>
             <button type="button" class="btn btn-primary" id="runDiagnosticsBtn">
               <span class="btn-loader"></span>
@@ -137,6 +161,30 @@
               </span>
               <span class="btn-text" data-i18n="diagnostics.run_btn">Запустить диагностику</span>
             </button>
+          </div>
+        </div>
+
+        <div class="dev-gpu-mock-bar" id="devGpuMockBar" style="display: none; margin-bottom: 20px; padding: 10px 16px; background: rgba(255, 171, 0, 0.08); border: 1px solid rgba(255, 171, 0, 0.28); border-radius: 10px; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 16px;">🛠️</span>
+            <div>
+              <span class="font-mono" style="font-weight: 700; color: #ffab00; font-size: 0.85rem;">[DEV MODE] Эмуляция видеокарты (GPU Mock):</span>
+              <span class="text-muted" style="font-size: 0.76rem; display: block;">Тестирование поведения оверлея и DXVK на различных GPU</span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <select id="devGpuPresetSelect" class="form-select font-mono" style="padding: 5px 10px; border-radius: 6px; font-size: 0.8rem; cursor: pointer;">
+              <option value="real">Реальная видеокарта (Real GPU)</option>
+              <option value="rtx4090">NVIDIA GeForce RTX 4090 (24 GB • Vulkan 1.4)</option>
+              <option value="rx7900xtx">AMD Radeon RX 7900 XTX (24 GB • Vulkan 1.3)</option>
+              <option value="gtx1060">NVIDIA GeForce GTX 1060 (6 GB • Vulkan 1.3)</option>
+              <option value="gtx750ti">NVIDIA GeForce GTX 750 Ti (2 GB • Vulkan 1.2 Kepler)</option>
+              <option value="intel_uhd630">Intel UHD Graphics 630 (Shared VRAM)</option>
+              <option value="intel_hd4000">Intel HD Graphics 4000 (Без Vulkan • D3D9 Only)</option>
+            </select>
+            <button type="button" class="btn btn-secondary font-mono" id="btnApplyGpuMock" style="padding: 5px 12px; font-size: 0.78rem;">Применить</button>
+            <button type="button" class="btn btn-secondary font-mono" id="btnResetGpuMock" style="padding: 5px 12px; font-size: 0.78rem;">Сброс</button>
+            <span class="badge badge-warning font-mono" id="devGpuActiveBadge" style="display: none;">MOCK ACTIVE</span>
           </div>
         </div>
 
@@ -156,25 +204,25 @@
                   <p class="card-subtitle" data-i18n="os.card_subtitle">Конфигурация ядра Windows и графической подсистемы</p>
                 </div>
               </div>
-              <span class="badge badge-success font-mono" id="osBadge" data-i18n="os.badge_ready">WDDM 3.x Готов</span>
+              <span class="badge badge-success font-mono" id="osBadge" data-i18n="os.badge_ready">Определение...</span>
             </div>
 
             <div class="specs-list">
               <div class="spec-row">
                 <span class="spec-label" data-i18n="os.param_name">Версия ОС</span>
-                <span class="spec-val font-mono" id="osNameVal">Windows 11 Pro 64-bit</span>
+                <span class="spec-val font-mono" id="osNameVal">Определение ОС...</span>
               </div>
               <div class="spec-row">
                 <span class="spec-label" data-i18n="os.param_build">Номер сборки</span>
-                <span class="spec-val font-mono" id="osBuildVal">25H2 (Build 26200.1742)</span>
+                <span class="spec-val font-mono" id="osBuildVal">—</span>
               </div>
               <div class="spec-row">
                 <span class="spec-label" data-i18n="os.param_runtime">DirectX Runtime</span>
-                <span class="spec-val font-mono" id="osRuntimeVal">DirectX 12 (DirectX Agility SDK)</span>
+                <span class="spec-val font-mono" id="osRuntimeVal">—</span>
               </div>
               <div class="spec-row">
                 <span class="spec-label" data-i18n="os.param_wddm">Драйвер WDDM</span>
-                <span class="spec-val font-mono" id="osWddmVal">WDDM 3.2 (Vulkan WSI совместим)</span>
+                <span class="spec-val font-mono" id="osWddmVal">—</span>
               </div>
             </div>
 
@@ -200,29 +248,29 @@
                   <p class="card-subtitle" data-i18n="gpu.card_subtitle">Аппаратное ускорение и поддержка расширений Vulkan API</p>
                 </div>
               </div>
-              <span class="badge badge-accent font-mono" id="gpuBadge" data-i18n="gpu.badge_ready">Vulkan 1.3/1.4 Ready</span>
+              <span class="badge badge-accent font-mono" id="gpuBadge" data-i18n="gpu.badge_ready">Определение...</span>
             </div>
 
             <div class="specs-list specs-list--2cols">
               <div class="spec-row">
                 <span class="spec-label" data-i18n="gpu.param_model">Графический чип (GPU)</span>
-                <span class="spec-val font-mono" id="gpuModelVal">NVIDIA GeForce RTX 3060 Ti</span>
+                <span class="spec-val font-mono" id="gpuModelVal">Определение GPU...</span>
               </div>
               <div class="spec-row">
                 <span class="spec-label" data-i18n="gpu.param_vram">Объем видеопамяти (VRAM)</span>
-                <span class="spec-val font-mono" id="gpuVramVal">8192 MB (8 GB GDDR6)</span>
+                <span class="spec-val font-mono" id="gpuVramVal">—</span>
               </div>
               <div class="spec-row">
                 <span class="spec-label" data-i18n="gpu.param_driver">Версия видеодрайвера</span>
-                <span class="spec-val font-mono" id="gpuDriverVal">591.86 (DirectX / Vulkan)</span>
+                <span class="spec-val font-mono" id="gpuDriverVal">—</span>
               </div>
               <div class="spec-row">
                 <span class="spec-label" data-i18n="gpu.param_directx">Поддержка DirectX</span>
-                <span class="spec-val font-mono" id="gpuDirectxVal">DirectX 12 (FL 12_2 Ultimate)</span>
+                <span class="spec-val font-mono" id="gpuDirectxVal">—</span>
               </div>
               <div class="spec-row spec-row--span2">
                 <span class="spec-label" data-i18n="gpu.param_vulkan">Vulkan API Loader</span>
-                <span class="spec-val font-mono" id="gpuVulkanVal">Vulkan Loader 1.4.321.0 (vulkan-1.dll)</span>
+                <span class="spec-val font-mono" id="gpuVulkanVal">—</span>
               </div>
             </div>
 
@@ -298,27 +346,27 @@
                   <p class="card-subtitle" data-i18n="cpu.card_subtitle">Многопоточный оверхед и поддержка векторных инструкций</p>
                 </div>
               </div>
-              <span class="badge badge-success font-mono" id="cpuBadge" data-i18n="cpu.badge_ready">Многопоточность активна</span>
+              <span class="badge badge-success font-mono" id="cpuBadge" data-i18n="cpu.badge_ready">Определение...</span>
             </div>
 
             <div class="specs-list specs-list--2cols">
               <div class="spec-row">
                 <span class="spec-label" data-i18n="cpu.param_model">Модель процессора</span>
-                <span class="spec-val font-mono" id="cpuModelVal">AMD Ryzen 5 2600 Six-Core</span>
+                <span class="spec-val font-mono" id="cpuModelVal">Определение CPU...</span>
               </div>
               <div class="spec-row">
                 <span class="spec-label" data-i18n="cpu.param_topology">Ядра и потоки</span>
-                <span class="spec-val font-mono" id="cpuTopologyVal">6 ядер / 12 потоков</span>
+                <span class="spec-val font-mono" id="cpuTopologyVal">—</span>
               </div>
               <div class="spec-row">
                 <span class="spec-label" data-i18n="cpu.param_clock">Тактовая частота</span>
-                <span class="spec-val font-mono" id="cpuClockVal">3.40 GHz (3400 MHz)</span>
+                <span class="spec-val font-mono" id="cpuClockVal">—</span>
               </div>
               <div class="spec-row">
                 <span class="spec-label" data-i18n="cpu.param_instructions">Инструкции</span>
                 <div class="instruction-tags">
-                  <span class="instruction-badge font-mono active" id="sse42Badge">SSE4.2</span>
-                  <span class="instruction-badge font-mono active" id="avx2Badge">AVX2</span>
+                  <span class="instruction-badge font-mono" id="sse42Badge">SSE4.2</span>
+                  <span class="instruction-badge font-mono" id="avx2Badge">AVX2</span>
                 </div>
               </div>
             </div>
@@ -326,15 +374,15 @@
             <div class="cpu-overhead-box">
               <div class="overhead-top-row">
                 <span class="overhead-title font-mono" data-i18n="cpu.overhead_title">Запас мощности CPU для рендеринга Vulkan</span>
-                <span class="overhead-score font-mono" id="cpuOverheadScore">92%</span>
+                <span class="overhead-score font-mono" id="cpuOverheadScore">—</span>
               </div>
               <div class="overhead-progress-track">
-                <div class="overhead-progress-fill" id="cpuOverheadBar" style="width: 92%"></div>
+                <div class="overhead-progress-fill" id="cpuOverheadBar" style="width: 50%"></div>
               </div>
               <div class="overhead-bottom-row">
                 <div class="overhead-status-tag">
                   <span class="status-dot-inline status-dot--ready"></span>
-                  <span class="overhead-status-label font-mono" id="cpuOverheadStatus" data-i18n="cpu.overhead_status">Готов к низкоуровневой обработке Vulkan</span>
+                  <span class="overhead-status-label font-mono" id="cpuOverheadStatus" data-i18n="cpu.overhead_status">Оценка оверхеда...</span>
                 </div>
                 <p class="overhead-desc" data-i18n="cpu.overhead_desc">Трансляция DXVK разгружает однопоточный драйвер D3D9 и распределяет вызовы отрисовки по всем логическим ядрам процессора.</p>
               </div>
@@ -356,41 +404,41 @@
                   <p class="card-subtitle" data-i18n="display.card_subtitle">Параметры экрана, частота обновления и поддержка HDR</p>
                 </div>
               </div>
-              <span class="badge badge-accent font-mono" id="displayBadge" data-i18n="display.badge_ready">200 Hz High-FPS Ready</span>
+              <span class="badge badge-accent font-mono" id="displayBadge" data-i18n="display.badge_ready">Определение...</span>
             </div>
 
             <div class="specs-list specs-list--2cols">
               <div class="spec-row">
                 <span class="spec-label" data-i18n="display.param_model">Модель монитора</span>
-                <span class="spec-val font-mono" id="displayModelVal">Acer KG271U X1 (27" QHD)</span>
+                <span class="spec-val font-mono" id="displayModelVal">Определение дисплея...</span>
               </div>
               <div class="spec-row">
                 <span class="spec-label" data-i18n="display.param_resolution">Текущее разрешение</span>
-                <span class="spec-val font-mono" id="displayResVal">2560 × 1440 (2K QHD)</span>
+                <span class="spec-val font-mono" id="displayResVal">—</span>
               </div>
               <div class="spec-row">
                 <span class="spec-label" data-i18n="display.param_current_hz">Установленная герцовка</span>
-                <span class="spec-val font-mono" id="displayCurrentHzVal">200 Hz</span>
+                <span class="spec-val font-mono" id="displayCurrentHzVal">—</span>
               </div>
               <div class="spec-row">
                 <span class="spec-label" data-i18n="display.param_max_hz">Максимальная герцовка</span>
-                <span class="spec-val font-mono" id="displayMaxHzVal">200 Hz</span>
+                <span class="spec-val font-mono" id="displayMaxHzVal">—</span>
               </div>
               <div class="spec-row">
                 <span class="spec-label" data-i18n="display.param_hdr">Поддержка HDR</span>
-                <span class="spec-val font-mono" id="displayHdrVal">HDR10 (High Dynamic Range) Supported</span>
+                <span class="spec-val font-mono" id="displayHdrVal">—</span>
               </div>
               <div class="spec-row">
                 <span class="spec-label" data-i18n="display.param_colors">Глубина цвета</span>
-                <span class="spec-val font-mono" id="displayColorVal">10-bit HDR / 8-bit + FRC (1.07 Billion Colors)</span>
+                <span class="spec-val font-mono" id="displayColorVal">—</span>
               </div>
               <div class="spec-row">
                 <span class="spec-label" data-i18n="display.param_vrr">Переменная частота (VRR)</span>
-                <span class="spec-val font-mono" id="displayVrrVal">AMD FreeSync Premium / G-Sync Compatible (Active)</span>
+                <span class="spec-val font-mono" id="displayVrrVal">—</span>
               </div>
               <div class="spec-row">
                 <span class="spec-label" data-i18n="display.param_vulkan_wsi">Vulkan Present Mode</span>
-                <span class="spec-val font-mono" id="displayVulkanWsiVal">VK_PRESENT_MODE_MAILBOX_KHR (Fast-Sync)</span>
+                <span class="spec-val font-mono" id="displayVulkanWsiVal">—</span>
               </div>
             </div>
 
@@ -462,6 +510,9 @@
             <p class="panel-subtitle" data-i18n="projects.panel_subtitle">Универсальный профилировщик и инжектор DXVK / 4GB RAM Patch для кастомных лаунчеров CRMP и SAMP</p>
           </div>
           <div class="panel-header-actions">
+            <span class="badge badge-accent font-mono" id="projectsDevModeBadge" style="display: none; padding: 6px 12px; font-size: 11px; letter-spacing: 0.05em; cursor: pointer;" title="Режим разработчика активен (защита снята). Кликните для отключения">
+              DEV MODE: PROTECTION OFF
+            </span>
             <button type="button" class="btn btn-secondary" id="projectsRescanAllBtn">
               <span class="btn-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -473,7 +524,6 @@
           </div>
         </div>
 
-        <!-- Motion Project Featured Hero Tile (Xbox One Style) -->
         <div class="motion-featured-tile glass-card" id="tileMotionProject">
           <div class="xbox-tile-glow"></div>
           <div class="motion-tile-content">
@@ -510,7 +560,6 @@
           </div>
         </div>
 
-        <!-- Motion Project Studio Window (Dedicated Inner Configuration Tab) -->
         <div class="motion-studio-window glass-card" id="motionStudioWindow">
           <div class="studio-header">
             <div class="studio-header-title-wrap">
@@ -529,7 +578,6 @@
             </div>
           </div>
 
-          <!-- Section 1: Launcher Detection & Path -->
           <div class="studio-section">
             <div class="studio-section-header">
               <div class="section-title-wrap">
@@ -594,14 +642,13 @@
                 </div>
               </div>
 
-              <!-- Game Folder Path Selector -->
               <div style="margin-top: 1rem; padding: 0.85rem 1rem; background: rgba(0, 229, 255, 0.04); border: 1px solid rgba(0, 229, 255, 0.18); border-radius: 10px;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2" style="width: 16px; height: 16px;">
                       <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
                     </svg>
-                    <span class="font-heading" style="font-weight: 700; font-size: 0.88rem; color: #fff;" data-i18n="motion.game_path_title">Каталог игры Motion Project (GTA San Andreas)</span>
+                    <span class="font-heading" style="font-weight: 700; font-size: 0.88rem; color: var(--text-main);" data-i18n="motion.game_path_title">Каталог игры Motion Project (GTA San Andreas)</span>
                   </div>
                   <span class="badge badge-neutral font-mono" id="motionGamePathBadge" style="font-size: 0.72rem;">Поиск...</span>
                 </div>
@@ -654,7 +701,6 @@
                 </div>
               </div>
 
-              <!-- Game Directory & DLL Integrity Card -->
               <div class="glass-card game-guard-card" id="gameGuardCard" style="margin-top: 1rem; padding: 1.1rem 1.25rem; border: 1px solid rgba(0, 229, 255, 0.25); background: rgba(11, 19, 36, 0.65); border-radius: 12px;">
                 <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 0.9rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 0.75rem;">
                   <div style="display: flex; align-items: center; gap: 0.75rem;">
@@ -666,7 +712,7 @@
                     </div>
                     <div>
                       <div style="display: flex; align-items: center; gap: 0.6rem;">
-                        <span class="font-heading" style="font-weight: 700; font-size: 0.95rem; color: #fff;" data-i18n="motion.game_guard_title">Защита папки игры, сверка веса DXVK и отпечаток</span>
+                        <span class="font-heading" style="font-weight: 700; font-size: 0.95rem; color: var(--text-main);" data-i18n="motion.game_guard_title">Защита папки игры, сверка веса DXVK и отпечаток</span>
                         <span class="badge badge-success font-mono" id="gameGuardStatusBadge">АКТИВНА</span>
                       </div>
                       <span class="font-mono" style="font-size: 0.78rem; color: var(--color-text-muted);" id="gameGuardPathLabel">Каталог игры: C:\games\motion\Motion Project</span>
@@ -721,7 +767,6 @@
             </div>
           </div>
 
-          <!-- Section 2: Installation Options (DXVK Selection & 4GB RAM Patch) -->
           <div class="studio-section">
             <div class="studio-section-header">
               <div class="section-title-wrap">
@@ -732,7 +777,7 @@
             </div>
 
             <div class="options-container">
-              <!-- Sub-part A: DXVK Version Choice -->
+              
               <div class="opt-group">
                 <div class="opt-group-header">
                   <span class="opt-group-title font-mono" data-i18n="motion.dxvk_select_title">1. ВЫБОР ВЕРСИИ ТРАНСЛЯТОРА DXVK:</span>
@@ -745,7 +790,7 @@
                     <div class="radio-card-body">
                       <div class="radio-card-top">
                         <span class="radio-card-ver font-mono">DXVK 3.1.1</span>
-                        <span class="badge badge-highlight font-mono" data-i18n="motion.badge_recommended">Рекомендуется</span>
+                        <span class="badge badge-info font-mono" data-i18n="motion.badge_recommended">Официальный</span>
                       </div>
                       <span class="radio-card-spec font-mono">Vulkan 1.3+ / Advanced Pipelines</span>
                       <p class="radio-card-desc" data-i18n="motion.dxvk311_desc">Максимальный FPS, параллельная компиляция шейдеров и адаптация под современные GPU NVIDIA RTX/GTX.</p>
@@ -790,7 +835,6 @@
                 </div>
               </div>
 
-              <!-- Sub-part B: 4GB RAM Patch (Large Address Aware) -->
               <div class="opt-group">
                 <div class="opt-group-header">
                   <span class="opt-group-title font-mono" data-i18n="motion.laa_title">2. ПАТЧ 4 ГБ ОЗУ (LARGE ADDRESS AWARE):</span>
@@ -822,7 +866,6 @@
                 </div>
               </div>
 
-              <!-- Sub-part C: Frame Rate Limiter (Dedicated Card) -->
               <div class="opt-group">
                 <div class="opt-group-header">
                   <span class="opt-group-title font-mono" data-i18n="motion.limiter_section_title">3. ОГРАНИЧЕНИЕ КАДРОВОЙ ЧАСТОТЫ (FPS LIMITER):</span>
@@ -876,7 +919,6 @@
                 </div>
               </div>
 
-              <!-- Sub-part D: Informative HUD Customization (Purely HUD) -->
               <div class="opt-group">
                 <div class="opt-group-header">
                   <span class="opt-group-title font-mono" data-i18n="motion.hud_section_title">4. НАСТРОЙКА ИНФОРМАТИВНОГО HUD (DXVK.HUD):</span>
@@ -956,7 +998,6 @@
                 </div>
               </div>
 
-              <!-- Sub-part E: Seamless and VSync Tweaks -->
               <div class="opt-group">
                 <div class="opt-group-header">
                   <span class="opt-group-title font-mono" data-i18n="motion.tweaks_title">5. ПАРАМЕТРЫ БЕСШОВНОСТИ И V-SYNC (DXVK.CONF):</span>
@@ -986,12 +1027,83 @@
                       <span class="tweak-desc" data-i18n="motion.tweak_vsync_desc">Полное отключение вертикальной синхронизации на уровне Direct3D 9 и Vulkan.</span>
                     </div>
                   </label>
+
+                  <label class="tweak-item" for="motionEnableElectronLogging">
+                    <input type="checkbox" id="motionEnableElectronLogging" checked>
+                    <div class="tweak-text">
+                      <span class="tweak-name font-mono" data-i18n="motion.tweak_electron_logging">Логирование Electron (SAPatcher_Electron.log)</span>
+                      <span class="tweak-desc" data-i18n="motion.tweak_electron_logging_desc">Запись полного вывода консоли Chromium/Node.js, ошибок и предупреждений лаунчера в лог-файл.</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div class="opt-group" style="margin-top: 1.25rem;">
+                <div class="opt-group-header">
+                  <span class="opt-group-title font-mono" data-i18n="motion.ui_theme_title">6. ВЫБОР ИНТЕРФЕЙСА ЛАУНЧЕРА (ДВИЖОК 2.0.0):</span>
+                </div>
+
+                <div class="dxvk-radio-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+                  <label class="dxvk-radio-card active" data-ui-theme="v2" id="uiThemeCardV2">
+                    <input type="radio" name="motionUiTheme" value="v2" checked>
+                    <div class="dxvk-card-inner">
+                      <div class="dxvk-card-header">
+                        <span class="dxvk-badge badge-primary font-mono">v2.0.0 (Modern)</span>
+                        <span class="badge badge-success font-mono">Новый стиль</span>
+                      </div>
+                      <div class="dxvk-card-body">
+                        <span class="dxvk-title font-heading" data-i18n="motion.ui_theme_v2_title">Интерфейс 2.0.0 (Figma Dark)</span>
+                        <span class="dxvk-desc" data-i18n="motion.ui_theme_v2_desc">Современный темный UI с карточками графики, акцентными кнопками и новым меню настроек.</span>
+                      </div>
+                    </div>
+                  </label>
+
+                  <label class="dxvk-radio-card" data-ui-theme="v1" id="uiThemeCardV1">
+                    <input type="radio" name="motionUiTheme" value="v1">
+                    <div class="dxvk-card-inner">
+                      <div class="dxvk-card-header">
+                        <span class="dxvk-badge badge-cyan font-mono">v1.2.46 (Classic)</span>
+                        <span class="badge badge-info font-mono">Классика</span>
+                      </div>
+                      <div class="dxvk-card-body">
+                        <span class="dxvk-title font-heading" data-i18n="motion.ui_theme_v1_title">Классический интерфейс 1.2.46</span>
+                        <span class="dxvk-desc" data-i18n="motion.ui_theme_v1_desc">Привычный компактный интерфейс с классическим меню, быстрым списком серверов и плавной анимацией.</span>
+                      </div>
+                    </div>
+                  </label>
+
+                  <label class="dxvk-radio-card" data-ui-theme="metro" id="uiThemeCardMetro">
+                    <input type="radio" name="motionUiTheme" value="metro">
+                    <div class="dxvk-card-inner">
+                      <div class="dxvk-card-header">
+                        <span class="dxvk-badge badge-primary font-mono" style="background: rgba(0, 120, 215, 0.2); color: #00A4EF; border-color: rgba(0, 120, 215, 0.4);">Windows 8 Metro</span>
+                        <span class="badge badge-warning font-mono">Плиточный UI</span>
+                      </div>
+                      <div class="dxvk-card-body">
+                        <span class="dxvk-title font-heading" data-i18n="motion.ui_theme_metro_title">Windows 8 Live Tiles (Metro UI)</span>
+                        <span class="dxvk-desc" data-i18n="motion.ui_theme_metro_desc">Оригинальный интерфейс с живыми плитками в стиле Windows 8.1, панорамной прокруткой и полным функционалом 2.0.0.</span>
+                      </div>
+                    </div>
+                  </label>
+
+                  <label class="dxvk-radio-card" data-ui-theme="sapatcher" id="uiThemeCardSapatcher">
+                    <input type="radio" name="motionUiTheme" value="sapatcher">
+                    <div class="dxvk-card-inner">
+                      <div class="dxvk-card-header">
+                        <span class="dxvk-badge badge-cyan font-mono" style="background: rgba(0, 229, 255, 0.15); color: #00E5FF; border-color: rgba(0, 229, 255, 0.4);">SAPatcher Cyber</span>
+                        <span class="badge badge-primary font-mono" style="background: rgba(121, 40, 202, 0.2); color: #A855F7;">Xbox One Glass</span>
+                      </div>
+                      <div class="dxvk-card-body">
+                        <span class="dxvk-title font-heading" data-i18n="motion.ui_theme_sapatcher_title">SAPatcher Dark Cyber Glass</span>
+                        <span class="dxvk-desc" data-i18n="motion.ui_theme_sapatcher_desc">Темный стеклянный стиль в духе SAPatcher и Xbox One с неоновой подсветкой, HUD-телеметрией и кибер-деками.</span>
+                      </div>
+                    </div>
+                  </label>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Section 3: Actions & Terminal Log -->
           <div class="studio-section">
             <div class="studio-section-header">
               <div class="section-title-wrap">
@@ -1000,13 +1112,13 @@
               </div>
             </div>
 
-            <!-- Patcher & Daemon Status Banner -->
             <div class="patcher-status-banner glass-card" style="margin-bottom: 1.25rem; padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(0, 229, 255, 0.25); background: rgba(11, 15, 25, 0.65);">
               <div style="display: flex; align-items: center; gap: 0.85rem;">
                 <span class="status-dot-inline status-dot--ready" style="width: 10px; height: 10px; box-shadow: 0 0 10px #00e5ff;"></span>
                 <div>
-                  <div style="display: flex; align-items: center; gap: 0.6rem;">
+                  <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
                     <span class="font-heading" id="motionPatchStatusTitle" style="font-size: 0.95rem; font-weight: 600; color: #fff;">Статус лаунчера: Проверяется...</span>
+                    <span class="badge badge-info font-mono" id="motionVersionBadge" style="font-size: 0.72rem;">Версия: Проверка</span>
                     <span class="badge badge-muted font-mono" id="motionGuardBadge" style="font-size: 0.72rem;">Защита: Проверка</span>
                     <span class="badge badge-muted font-mono" id="motionIntegrityBadge" style="font-size: 0.72rem;">Отпечаток: Проверка</span>
                     <span class="badge badge-warning font-mono" id="motionInstallPrereqBadge" style="font-size: 0.72rem;">Требуется патчинг лаунчера</span>
@@ -1068,9 +1180,21 @@
                 </span>
                 <span class="btn-text" data-i18n="motion.btn_launch">Запустить Motion Launcher</span>
               </button>
+
+              <button type="button" class="btn btn-ghost" id="motionOpenElectronLogBtn" title="Открыть лог-файл Electron (SAPatcher_Electron.log)">
+                <span class="btn-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                  </svg>
+                </span>
+                <span class="btn-text" data-i18n="motion.btn_open_electron_log">Лог Electron</span>
+              </button>
             </div>
 
-            <!-- Terminal Output -->
             <div class="motion-terminal-box">
               <div class="terminal-bar">
                 <div class="terminal-dots">
@@ -1087,6 +1211,481 @@
                 <div class="log-line log-line--success">[FOUND] Лаунчер обнаружен: C:\Users\Gigabyte A320M-H\AppData\Local\motion-launcher\Motion Launcher.exe</div>
                 <div class="log-line log-line--info">[STATUS] Версия Squirrel: 1.2.46 | Размер: 381.5 КБ | Готов к инъекции.</div>
                 <div class="log-line log-line--hint">[READY] Выберите версию DXVK (3.1.1 / 3.0 / 2.3 / 1.10.3) и патч 4GB, затем нажмите кнопку «Установить».</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-panel" id="tab-overlay">
+        <div class="panel-header">
+          <div class="panel-header-info">
+            <h1 class="panel-title" data-i18n="overlay.title">Внутриигровой Оверлей (SAPatcher Overlay)</h1>
+            <p class="panel-subtitle" data-i18n="overlay.subtitle">Управление аппаратным оверлеем в реальном времени. SAPatcher держит настройки оверлея, медиаплеер и статус внутри игры.</p>
+          </div>
+          <div class="panel-header-actions">
+            <div class="status-indicator">
+              <span class="status-dot-inline status-dot--ready" id="overlayStatusDot"></span>
+              <span class="status-text font-mono" id="overlayStatusText" data-i18n="overlay.badge_vulkan">Vulkan HUD • Активен</span>
+            </div>
+            <button type="button" class="btn btn-primary" id="btnSyncOverlay">
+              <span class="btn-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="23 4 23 10 17 10"/>
+                  <polyline points="1 20 1 14 7 14"/>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+              </span>
+              <span class="btn-text" data-i18n="overlay.btn_sync">Синхронизировать настройки</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="diagnostics-grid">
+          
+          <div class="overlay-gpu-warning" id="overlayGpuNotice" style="display: none; padding: 16px 20px; background: rgba(244, 63, 94, 0.12); border: 1px solid rgba(244, 63, 94, 0.35); border-radius: 12px; align-items: center; gap: 16px;">
+            <div style="font-size: 26px; flex-shrink: 0;">⚠️</div>
+            <div style="flex: 1;">
+              <div style="font-weight: 700; color: #f43f5e; font-size: 14.5px; margin-bottom: 3px;">Внутриигровой оверлей заблокирован: видеокарта не поддерживает Vulkan API</div>
+              <div style="font-size: 12.5px; color: var(--text-muted); line-height: 1.45;">Оверлей SAPatcher работает исключительно через транслятор DXVK (Vulkan). Обнаруженная видеокарта не поддерживает Vulkan, поэтому внутри игры оверлей отображаться не будет, а параметры заблокированы.</div>
+            </div>
+            <span class="badge badge-danger font-mono" style="flex-shrink: 0;">VULKAN N/A</span>
+          </div>
+
+          <div class="glass-card">
+            <div class="card-header">
+              <div class="card-header-title-wrap">
+                <div class="card-icon card-icon--display">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                    <line x1="8" y1="21" x2="16" y2="21"/>
+                    <line x1="12" y1="17" x2="12" y2="21"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="card-title font-heading" data-i18n="overlay.preview_title">Предпросмотр внутри игры</h3>
+                  <p class="card-subtitle" data-i18n="overlay.preview_desc">Так оверлей отображается при нажатии установленной клавиши в GTA SA / SA-MP</p>
+                </div>
+              </div>
+              <span class="badge badge-highlight font-mono">LIVE PREVIEW</span>
+            </div>
+
+            <div class="overlay-sim-viewport">
+              <div class="overlay-sim-game-bg" id="simGameBg">
+                
+                <div class="overlay-sim-hud-box" id="simOverlayBox" style="cursor: move;">
+                  <div class="overlay-sim-header" style="justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <button type="button" class="overlay-sim-gear-btn" id="simGearBtn" title="Настройки оверлея и виджеты">⚙</button>
+                      <span class="overlay-sim-title font-mono" id="simOverlayTitle">SAPatcher 2.0</span>
+                    </div>
+                    <button type="button" class="overlay-sim-add-btn" id="simAddWidgetBtn" title="Меню добавления виджетов" style="display: none;">+</button>
+                  </div>
+                  <div class="overlay-sim-sub">
+                    <span class="text-emerald">Vulkan D3D9 Active</span>
+                    <span class="text-muted font-mono">| DXVK 3.1.1</span>
+                  </div>
+                  <div class="overlay-sim-fps font-mono" id="simFpsRow">
+                    FPS: <span class="text-cyan font-bold" id="simFpsVal">144.2</span> (6.93 ms)
+                  </div>
+                  <div class="overlay-sim-hint font-mono" id="simHintRow">
+                    Нажмите [<span id="simHotkeyVal" class="text-amber">F11</span>] чтобы скрыть • Перетащите для смены позиции
+                  </div>
+                </div>
+
+                <div class="widget-catalog-popover" id="widgetCatalogPopover" style="display: none;">
+                  <div class="widget-catalog-header">
+                    <span class="widget-catalog-title font-heading">МЕНЮ ВИДЖЕТОВ</span>
+                    <button type="button" class="btn btn-ghost btn-sm" id="closeWidgetCatalogBtn" style="padding: 2px 7px; font-size: 11px;">✕</button>
+                  </div>
+                  <div class="widget-catalog-item" id="btnAddSmtcWidget">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                      <span style="font-size: 20px;">🎵</span>
+                      <div>
+                        <div style="font-size: 12.5px; font-weight: 700; color: var(--text-main);">SMTC Аудиоплеер</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Windows Media Controls • Спектрограмма</div>
+                      </div>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-sm" style="padding: 4px 10px; font-size: 11px;">+ Добавить</button>
+                  </div>
+                </div>
+
+                <div class="smtc-widget font-sans" id="simSmtcWidget" style="display: flex; flex-direction: column;">
+                  <div class="smtc-widget-topbar">
+                    <div class="smtc-source-badge font-mono">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="2" width="9" height="9"/>
+                        <rect x="13" y="2" width="9" height="9"/>
+                        <rect x="2" y="13" width="9" height="9"/>
+                        <rect x="13" y="13" width="9" height="9"/>
+                      </svg>
+                      <span id="smtcSourceText">Windows SMTC</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <span class="font-mono text-cyan" id="smtcScaleBadge" style="font-size: 10px; opacity: 0.75;">1.0x</span>
+                      <button type="button" class="widget-close-btn" id="smtcWidgetCloseBtn" title="Удалить виджет">✕</button>
+                    </div>
+                  </div>
+
+                  <div class="smtc-body">
+                    <div class="smtc-art-wrap">
+                      <div class="smtc-art-fallback" id="smtcArtIcon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 28px; height: 28px;">
+                          <path d="M9 18V5l12-2v13"></path>
+                          <circle cx="6" cy="18" r="3"></circle>
+                          <circle cx="18" cy="16" r="3"></circle>
+                        </svg>
+                      </div>
+                    </div>
+                    <div class="smtc-info">
+                      <div class="smtc-track-title" id="smtcTrackTitle">DVRST — Close Eyes</div>
+                      <div class="smtc-track-artist" id="smtcTrackArtist">Phonk Master • Spotify</div>
+                      <div class="smtc-visualizer playing" id="smtcVisualizer">
+                        <div class="smtc-bar"></div>
+                        <div class="smtc-bar"></div>
+                        <div class="smtc-bar"></div>
+                        <div class="smtc-bar"></div>
+                        <div class="smtc-bar"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="smtc-progress-row">
+                    <div class="smtc-seek-bar-wrap" id="smtcSeekBar">
+                      <div class="smtc-seek-fill" id="smtcSeekFill" style="width: 48%;"></div>
+                    </div>
+                    <div class="smtc-time-row font-mono">
+                      <span id="smtcTimeCurrent">01:34</span>
+                      <span id="smtcTimeTotal">03:15</span>
+                    </div>
+                  </div>
+
+                  <div class="smtc-controls">
+                    <button type="button" class="smtc-btn" id="smtcPrevBtn" title="Предыдущий трек">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                        <polygon points="19 20 9 12 19 4 19 20"></polygon>
+                        <line x1="5" y1="19" x2="5" y2="5"></line>
+                      </svg>
+                    </button>
+
+                    <button type="button" class="smtc-btn smtc-btn--play" id="smtcPlayBtn" title="Воспроизведение / Пауза">
+                      <svg viewBox="0 0 24 24" fill="currentColor" id="smtcPlayIcon" style="width: 16px; height: 16px;">
+                        <rect x="6" y="4" width="4" height="16"></rect>
+                        <rect x="14" y="4" width="4" height="16"></rect>
+                      </svg>
+                    </button>
+
+                    <button type="button" class="smtc-btn" id="smtcNextBtn" title="Следующий трек">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                        <polygon points="5 4 15 12 5 20 5 4"></polygon>
+                        <line x1="19" y1="5" x2="19" y2="19"></line>
+                      </svg>
+                    </button>
+
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 13px; height: 13px; color: var(--text-muted);">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                      </svg>
+                      <input type="range" class="smtc-vol-slider" id="smtcVolSlider" min="0" max="100" value="80" title="Громкость">
+                    </div>
+                  </div>
+
+                  <div class="widget-resize-handle" id="smtcResizeHandle" title="Потяните для изменения размера"></div>
+                </div>
+
+                <div class="overlay-sim-watermark font-mono">Grand Theft Auto: San Andreas (DirectX 9 → Vulkan via DXVK 3.1.1)</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass-card">
+            <div class="card-header">
+              <div class="card-header-title-wrap">
+                <div class="card-icon card-icon--gpu">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="card-title font-heading" data-i18n="overlay.settings_title">Параметры и управление оверлеем</h3>
+                  <p class="card-subtitle">Настройка горячей клавиши, отображаемых элементов и расположения на экране</p>
+                </div>
+              </div>
+              <span class="badge badge-success font-mono" id="ipcStatusBadge">IPC: READY</span>
+            </div>
+
+            <div class="settings-grid">
+              
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label class="setting-label" for="overlayEnabledToggle" data-i18n="overlay.enable_toggle">Включить внутриигровой оверлей</label>
+                  <span class="setting-desc" data-i18n="overlay.enable_desc">Активирует обработку оверлея библиотекой d3d9.dll в игре</span>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="overlayEnabledToggle" class="toggle-checkbox" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label class="setting-label" for="overlayHotkeySelect" data-i18n="overlay.hotkey_label">Клавиша открытия оверлея</label>
+                  <span class="setting-desc" data-i18n="overlay.hotkey_hint">При нажатии этой клавиши в игре откроется/скроется оверлей</span>
+                </div>
+                <div class="setting-control">
+                  <select class="form-select font-mono" id="overlayHotkeySelect">
+                    <option value="F11" data-code="122" selected>F11 (Рекомендуется)</option>
+                    <option value="F12" data-code="123">F12</option>
+                    <option value="F10" data-code="121">F10</option>
+                    <option value="F9" data-code="120">F9</option>
+                    <option value="~" data-code="192">~ (Тильда / Е / Ё)</option>
+                    <option value="Insert" data-code="45">Insert</option>
+                    <option value="Home" data-code="36">Home</option>
+                    <option value="PageUp" data-code="33">PageUp</option>
+                    <option value="End" data-code="35">End</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label class="setting-label">Фирменный бейдж оверлея</label>
+                  <span class="setting-desc">Идентификатор оверлея. Зафиксирован разработчиком (изменение и удаление отключены, доступно только перемещение).</span>
+                </div>
+                <div class="setting-control font-mono text-cyan" style="font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                  <span>🔒 SAPatcher 2.0</span>
+                </div>
+              </div>
+
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label class="setting-label" for="overlayShowFpsToggle" data-i18n="overlay.show_fps">Отображать счетчик FPS и время кадра</label>
+                  <span class="setting-desc">Высокоточный мониторинг частоты кадров и задержки рендеринга</span>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="overlayShowFpsToggle" class="toggle-checkbox" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label class="setting-label" for="overlayPositionSelect" data-i18n="overlay.position_label">Позиция бейджа оверлея</label>
+                  <span class="setting-desc">Угол или координаты отображения оверлея в игре (также можно перетаскивать мышью)</span>
+                </div>
+                <div class="setting-control">
+                  <select class="form-select font-mono" id="overlayPositionSelect">
+                    <option value="top-left" selected>Сверху слева (X: 24, Y: 24)</option>
+                    <option value="top-right">Сверху справа (X: 1400, Y: 24)</option>
+                    <option value="bottom-left">Снизу слева (X: 24, Y: 850)</option>
+                    <option value="bottom-right">Снизу справа (X: 1400, Y: 850)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="setting-item" style="grid-column: 1 / -1; background: rgba(0, 229, 255, 0.03); border: 1px dashed rgba(0, 229, 255, 0.25); border-radius: 10px; padding: 12px 16px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; flex-wrap: wrap; gap: 12px;">
+                  <div>
+                    <label class="setting-label" style="display: flex; align-items: center; gap: 8px;">
+                      <span>🧩 Модульные экранные виджеты (SMTC Плеер)</span>
+                      <span class="badge badge-accent font-mono" id="smtcActiveBadge">1 активен</span>
+                    </label>
+                    <span class="setting-desc">Виджеты можно масштабировать (увеличивать/уменьшать), перетаскивать по экрану или удалять крестиком.</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <span class="font-mono" style="font-size: 11px; color: var(--text-muted);">Масштаб:</span>
+                      <input type="range" id="widgetScaleSlider" min="0.7" max="1.5" step="0.05" value="1.0" style="width: 90px; accent-color: #00e5ff;">
+                      <span class="font-mono text-cyan" id="widgetScaleVal" style="font-size: 11px; min-width: 32px;">1.0x</span>
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btnToggleSmtcWidget">
+                      <span id="btnToggleSmtcText">+ Добавить SMTC плеер</span>
+                    </button>
+                    <button type="button" class="btn btn-ghost btn-sm" id="btnResetWidgetPos" title="Сбросить расположение виджетов">
+                      <span>Сброс позиции</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="overlay-actions-row" style="align-items: center; justify-content: space-between;">
+              <div class="overlay-info-notice" style="display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: rgba(0, 229, 255, 0.04); border: 1px solid rgba(0, 229, 255, 0.18); border-radius: 8px; font-size: 12px; color: var(--text-muted);">
+                <span style="font-size: 16px;">💡</span>
+                <span>Развертывание библиотек <b>DXVK</b> интегрировано в раздел <a href="#" id="linkGoToProjects" style="color: #00e5ff; text-decoration: underline; font-weight: 600;">«Патчинг лаунчера»</a>.</span>
+              </div>
+
+              <button type="button" class="btn btn-primary" id="btnSaveOverlaySettings">
+                <span class="btn-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                </span>
+                <span class="btn-text">Сохранить и применить</span>
+              </button>
+            </div>
+
+            <div class="motion-terminal-box" style="margin-top: 20px;">
+              <div class="terminal-bar">
+                <div class="terminal-dots">
+                  <span class="terminal-dot terminal-dot--red"></span>
+                  <span class="terminal-dot terminal-dot--yellow"></span>
+                  <span class="terminal-dot terminal-dot--green"></span>
+                </div>
+                <span class="terminal-title font-mono">SAPatcher Overlay Log • Shared Memory IPC</span>
+                <button type="button" class="terminal-clear-btn font-mono" id="overlayClearLogBtn" title="Очистить консоль">clear</button>
+              </div>
+              <div class="terminal-body font-mono" id="overlayTerminalLog">
+                <div class="log-line log-line--info">[IPC] Сервер Shared Memory &quot;Local\SAPatcher_Overlay_IPC&quot; запущен.</div>
+                <div class="log-line log-line--success">[CORE] Библиотека 32-bit d3d9.dll готова к работе.</div>
+                <div class="log-line log-line--hint">[INFO] В игре нажмите установленную клавишу для открытия шестерёнки и SAPatcher-1.1.0-Beta.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-panel" id="tab-standalone-laa">
+        <div class="panel-header">
+          <div class="panel-header-info">
+            <h1 class="panel-title">Автономный патч 4 ГБ ОЗУ (Large Address Aware)</h1>
+            <p class="panel-subtitle">Патчинг любого 32-битного .exe для устранения лимита памяти в 2 ГБ без использования Vulkan/DXVK</p>
+          </div>
+          <div class="panel-header-actions">
+            <span class="badge badge-emerald font-mono">D3D9 NATIVE MODE</span>
+          </div>
+        </div>
+
+        <div class="settings-grid">
+          
+          <div class="gpu-no-vulkan-card glass-card" style="grid-column: 1 / -1; padding: 16px 20px; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 12px; display: flex; align-items: flex-start; gap: 14px;">
+            <div style="font-size: 24px; line-height: 1; flex-shrink: 0; margin-top: 2px;">⚠️</div>
+            <div>
+              <div style="font-size: 14px; font-weight: 700; color: #f59e0b; margin-bottom: 4px;">РЕЖИМ СОВМЕСТИМОСТИ DIRECT3D 9 (БЕЗ DXVK)</div>
+              <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.5;">
+                Ваша видеокарта не поддерживает Vulkan API, поэтому установка транслятора DXVK и графический оверлей отключены во избежание сбоев. В этом режиме игра запускается на нативном движке Direct3D 9. Автономный патч <strong>4 ГБ ОЗУ (IMAGE_FILE_LARGE_ADDRESS_AWARE)</strong> позволяет расширить лимит оперативной памяти для любого исполняемого файла игры (motion.exe, samp.exe, gta_sa.exe или любого другого .exe), навсегда устраняя краши <em>Warning: Low memory</em> и зависания HD-текстур.
+              </div>
+            </div>
+          </div>
+
+          <div class="card glass-card" style="grid-column: 1 / -1;">
+            <div class="card-header">
+              <span class="card-step font-mono">01</span>
+              <div>
+                <h3 class="card-title font-heading">Выбор исполняемого файла (.EXE)</h3>
+                <p class="card-desc">Укажите любой 32-битный PE исполняемый файл для анализа и применения флага 4 ГБ ОЗУ</p>
+              </div>
+            </div>
+
+            <div class="form-row" style="margin-top: 14px; display: flex; gap: 10px; align-items: center;">
+              <input type="text" id="standaloneExePath" class="form-input font-mono" placeholder="Выберите файл .exe или нажмите быстрый выбор ниже..." style="flex: 1;" readonly />
+              <button type="button" class="btn btn-primary" id="btnBrowseStandaloneExe" style="flex-shrink: 0;">
+                <span class="btn-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                  </svg>
+                </span>
+                <span class="btn-text">Обзор .EXE...</span>
+              </button>
+            </div>
+
+            <div style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+              <span class="font-mono" style="font-size: 12px; color: var(--text-muted); margin-right: 4px;">Быстрый выбор:</span>
+              <button type="button" class="btn btn-ghost btn-sm font-mono" id="btnQuickSelectMotion" title="Выбрать motion.exe из найденного каталога">motion.exe</button>
+              <button type="button" class="btn btn-ghost btn-sm font-mono" id="btnQuickSelectSamp" title="Выбрать samp.exe из найденного каталога">samp.exe</button>
+              <button type="button" class="btn btn-ghost btn-sm font-mono" id="btnQuickSelectGtaSa" title="Выбрать gta_sa.exe из найденного каталога">gta_sa.exe</button>
+              <button type="button" class="btn btn-ghost btn-sm font-mono" id="btnQuickInspectReload" title="Обновить анализ текущего файла">↺ Перепроверить</button>
+            </div>
+          </div>
+
+          <div class="card glass-card" id="standaloneExeInspectorCard" style="grid-column: 1 / -1;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="card-step font-mono">02</span>
+                <div>
+                  <h3 class="card-title font-heading">Анализ PE-структуры и статуса LAA</h3>
+                  <p class="card-desc">Характеристики заголовка PE, флаг IMAGE_FILE_LARGE_ADDRESS_AWARE (0x0020) и контрольная сумма</p>
+                </div>
+              </div>
+              <span class="badge badge-wip font-mono" id="standaloneLaaStatusBadge">ОЖИДАНИЕ ВЫБОРА</span>
+            </div>
+
+            <div class="integrity-grid" style="margin-top: 16px;">
+              <div class="integrity-metric">
+                <span class="metric-label font-mono">ИМЯ ФАЙЛА</span>
+                <span class="metric-value font-mono" id="standaloneInspectFileName">—</span>
+              </div>
+              <div class="integrity-metric">
+                <span class="metric-label font-mono">РАЗМЕР ФАЙЛА</span>
+                <span class="metric-value font-mono" id="standaloneInspectFileSize">—</span>
+              </div>
+              <div class="integrity-metric">
+                <span class="metric-label font-mono">СМЕЩЕНИЕ PE</span>
+                <span class="metric-value font-mono" id="standaloneInspectPeOffset">—</span>
+              </div>
+              <div class="integrity-metric">
+                <span class="metric-label font-mono">LAA ФЛАГ (0x0020)</span>
+                <span class="metric-value font-mono" id="standaloneInspectLaaFlag">—</span>
+              </div>
+              <div class="integrity-metric">
+                <span class="metric-label font-mono">CHECKSUM PE</span>
+                <span class="metric-value font-mono" id="standaloneInspectChecksum">—</span>
+              </div>
+              <div class="integrity-metric">
+                <span class="metric-label font-mono">БЭКАП (.BACKUP)</span>
+                <span class="metric-value font-mono" id="standaloneInspectBackupStatus">—</span>
+              </div>
+            </div>
+
+            <div id="standaloneInspectMessageBox" style="margin-top: 14px; padding: 10px 14px; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; font-size: 12.5px; color: var(--text-secondary);">
+              Выберите любой исполняемый файл для проведения инспекции PE-заголовка.
+            </div>
+
+            <div class="action-buttons-row" style="margin-top: 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+              <button type="button" class="btn btn-primary" id="btnApplyStandaloneLaa" disabled style="background: linear-gradient(135deg, #10b981, #059669); border-color: #059669;">
+                <span class="btn-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                  </svg>
+                </span>
+                <span class="btn-text">Пропатчить 4 ГБ ОЗУ (LAA)</span>
+              </button>
+
+              <button type="button" class="btn btn-secondary" id="btnRestoreStandaloneLaa" disabled>
+                <span class="btn-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="1 4 1 10 7 10"/>
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                  </svg>
+                </span>
+                <span class="btn-text">Восстановить из .Backup</span>
+              </button>
+
+              <button type="button" class="btn btn-ghost" id="btnLaunchStandaloneExe" disabled>
+                <span class="btn-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                  </svg>
+                </span>
+                <span class="btn-text">Запустить .EXE</span>
+              </button>
+            </div>
+
+            <div class="motion-terminal-box" style="margin-top: 22px;">
+              <div class="terminal-bar">
+                <div class="terminal-dots">
+                  <span class="terminal-dot terminal-dot--red"></span>
+                  <span class="terminal-dot terminal-dot--yellow"></span>
+                  <span class="terminal-dot terminal-dot--green"></span>
+                </div>
+                <span class="terminal-title font-mono">SAPatcher Standalone LAA Console • PE Engine</span>
+                <button type="button" class="terminal-clear-btn font-mono" id="standaloneClearLogBtn" title="Очистить лог">clear</button>
+              </div>
+              <div class="terminal-body font-mono" id="standaloneTerminalLog">
+                <div class="log-line log-line--info">[LAA_CORE] Модуль автономного патчинга 4 ГБ ОЗУ готов к работе.</div>
+                <div class="log-line log-line--hint">[INFO] Выберите любой 32-битный .exe файл для установки флага IMAGE_FILE_LARGE_ADDRESS_AWARE.</div>
               </div>
             </div>
           </div>
@@ -1129,6 +1728,37 @@
       <p class="dialog-message" id="errorDialogMessage"></p>
       <div class="dialog-actions">
         <button type="button" class="btn btn-secondary" id="errorDialogCloseBtn" data-i18n="dialogs.close">Закрыть</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="confirm-dialog" id="developerModeDialog">
+    <div class="dialog-card glass-card" style="max-width: 480px;">
+      <div class="dialog-icon-circle" style="background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </div>
+      <h3 class="dialog-title font-heading" id="developerModeDialogTitle" style="color: #818cf8;">Режим разработчика (Dev Mode)</h3>
+      <p class="dialog-message" id="developerModeDialogDesc" style="margin-bottom: 14px; font-size: 13px;">Аппаратная аутентификация для отключения систем защиты и античита игры.</p>
+
+      <div style="margin-bottom: 14px; padding: 12px 14px; background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; text-align: left;">
+        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">ПРИВЯЗКА К ОБОРУДОВАНИЮ:</div>
+        <div class="font-mono text-cyan" id="devHwInfoText" style="font-size: 12px; font-weight: 600;">MSI MPG B550 GAMING PLUS (MS-7C56)</div>
+        <div id="devHwStatusTag" style="margin-top: 6px; font-size: 11.5px;" class="text-emerald">✓ Оборудование подтверждено</div>
+      </div>
+
+      <div style="margin-bottom: 18px; text-align: left;">
+        <label for="devModePasswordInput" style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">Ключ доступа разработчика:</label>
+        <input type="password" id="devModePasswordInput" class="form-input font-mono" placeholder="Введите пароль..." style="width: 100%; max-width: 100%; box-sizing: border-box;" autocomplete="off" />
+      </div>
+
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" id="devModeCancelBtn">Отмена</button>
+        <button type="button" class="btn btn-primary" id="devModeUnlockBtn">
+          <span class="btn-text" id="devModeUnlockBtnText">Разблокировать</span>
+        </button>
       </div>
     </div>
   </dialog>

@@ -29,7 +29,11 @@ SAPatcher_Diagnostics_Report.html
 
 # Local heavy test / unpack assets
 motion/
+motion_2.0.0_unpacked/
 dxvk-*/
 *.tar.gz
 scratch/
 publish/
+tools/glslang/
+d3d9.dll
+SAPatch-DXVK/

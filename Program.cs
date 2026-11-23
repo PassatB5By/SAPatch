@@ -129,7 +129,7 @@ public class Program
             CleanupOrphanedWebViewProcesses(webviewDataDir);
 
             var window = new PhotinoWindow()
-                .SetTitle("SAPatcher")
+                .SetTitle("SAPatcher 2.0")
                 .SetTemporaryFilesPath(webviewDataDir)
                 .SetBrowserControlInitParameters("--disable-features=CalculateNativeWinOcclusion --disable-gpu-watchdog")
                 .SetSize(1180, 800)
@@ -137,6 +137,17 @@ public class Program
                 .SetResizable(true);
 
             var settings = SettingsManager.Load();
+            OverlayIpcServer.Initialize(SettingsManager.Current);
+            GameOverlayHost.Start();
+
+                        try
+            {
+                if (Guard.GuardManager.IsDeveloperModeActive && !Guard.GuardManager.CheckHardwareAllowed())
+                {
+                    Guard.GuardManager.SetDeveloperMode(false);
+                }
+            }
+            catch {}
 
             window.RegisterWindowClosingHandler((sender, args) =>
             {
@@ -170,6 +181,7 @@ public class Program
                 onExit: () =>
                 {
                     _isExiting = true;
+                    try { GameOverlayHost.Stop(); } catch {}
                     try
                     {
                         window.Close();
@@ -208,6 +220,7 @@ public class Program
                             if (newSettings != null)
                             {
                                 SettingsManager.Save(newSettings);
+                                OverlayIpcServer.Update(SettingsManager.Current);
                             }
                         }
                         var payload = new
@@ -217,6 +230,86 @@ public class Program
                             data = SettingsManager.Current
                         };
                         window.SendWebMessage(JsonSerializer.Serialize(payload, JsonOpts));
+                    }
+                    else if (action == "syncOverlayIpc")
+                    {
+                        OverlayIpcServer.Update(SettingsManager.Current);
+                        var payload = new
+                        {
+                            @event = "overlayIpcSynced",
+                            success = true,
+                            data = SettingsManager.Current
+                        };
+                        window.SendWebMessage(JsonSerializer.Serialize(payload, JsonOpts));
+                    }
+                    else if (action == "deployOverlayDll")
+                    {
+                        string gamePath = root.TryGetProperty("path", out var p) ? p.GetString() ?? string.Empty : string.Empty;
+                        if (string.IsNullOrWhiteSpace(gamePath))
+                        {
+                            gamePath = SettingsManager.Current.MotionGamePath;
+                        }
+                        if (string.IsNullOrWhiteSpace(gamePath) && SettingsManager.Current.DiscoveredGamePaths.Count > 0)
+                        {
+                            gamePath = SettingsManager.Current.DiscoveredGamePaths.Values.FirstOrDefault() ?? string.Empty;
+                        }
+
+                        string sourceDll = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SAPatch-DXVK", "build_x86", "src", "d3d9", "d3d9.dll");
+                        if (!File.Exists(sourceDll))
+                        {
+                            sourceDll = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "d3d9.dll");
+                        }
+                        if (!File.Exists(sourceDll))
+                        {
+                            sourceDll = @"f:\project\SAPatcher\SAPatch-DXVK\build_x86\src\d3d9\d3d9.dll";
+                        }
+
+                        if (!File.Exists(sourceDll))
+                        {
+                            var failPayload = new
+                            {
+                                @event = "deployOverlayDllResult",
+                                success = false,
+                                message = "Скомпилированная библиотека d3d9.dll не найдена"
+                            };
+                            window.SendWebMessage(JsonSerializer.Serialize(failPayload, JsonOpts));
+                        }
+                        else if (string.IsNullOrWhiteSpace(gamePath) || !Directory.Exists(gamePath))
+                        {
+                            var failPayload = new
+                            {
+                                @event = "deployOverlayDllResult",
+                                success = false,
+                                message = "Директория игры не найдена или не указана в настройках"
+                            };
+                            window.SendWebMessage(JsonSerializer.Serialize(failPayload, JsonOpts));
+                        }
+                        else
+                        {
+                            try
+                            {
+                                string targetDll = Path.Combine(gamePath, "d3d9.dll");
+                                File.Copy(sourceDll, targetDll, true);
+                                var okPayload = new
+                                {
+                                    @event = "deployOverlayDllResult",
+                                    success = true,
+                                    message = $"Библиотека d3d9.dll успешно скопирована в {targetDll}",
+                                    targetPath = targetDll
+                                };
+                                window.SendWebMessage(JsonSerializer.Serialize(okPayload, JsonOpts));
+                            }
+                            catch (Exception ex)
+                            {
+                                var failPayload = new
+                                {
+                                    @event = "deployOverlayDllResult",
+                                    success = false,
+                                    message = $"Ошибка копирования: {ex.Message}"
+                                };
+                                window.SendWebMessage(JsonSerializer.Serialize(failPayload, JsonOpts));
+                            }
+                        }
                     }
                     else if (action == "checkMotionPatchStatus")
                     {
@@ -343,6 +436,44 @@ public class Program
                             data
                         };
                         window.SendWebMessage(JsonSerializer.Serialize(payload, JsonOpts));
+                    }
+                    else if (action == "setGpuMock")
+                    {
+                        string preset = root.TryGetProperty("preset", out var pProp) ? pProp.GetString() ?? "real" : "real";
+                        GpuMockService.SetPreset(preset);
+                        var data = DiagnosticsService.RunDiagnostics();
+                        var payload = new
+                        {
+                            @event = "diagnosticsResult",
+                            success = true,
+                            timestamp = DateTime.UtcNow.ToString("o"),
+                            data
+                        };
+                        window.SendWebMessage(JsonSerializer.Serialize(payload, JsonOpts));
+                    }
+                    else if (action == "resetGpuMock")
+                    {
+                        GpuMockService.Reset();
+                        var data = DiagnosticsService.RunDiagnostics();
+                        var payload = new
+                        {
+                            @event = "diagnosticsResult",
+                            success = true,
+                            timestamp = DateTime.UtcNow.ToString("o"),
+                            data
+                        };
+                        window.SendWebMessage(JsonSerializer.Serialize(payload, JsonOpts));
+                    }
+                    else if (action == "getGpuMockStatus")
+                    {
+                        var status = new
+                        {
+                            @event = "gpuMockStatusResult",
+                            isMock = GpuMockService.IsMockActive(),
+                            currentPreset = GpuMockService.GetCurrentPresetId(),
+                            presets = GpuMockService.Presets.Values.Select(p => new { p.Id, p.Name, p.Model, p.Vram, p.BadgeText })
+                        };
+                        window.SendWebMessage(JsonSerializer.Serialize(status, JsonOpts));
                     }
                     else if (action == "ping")
                     {
@@ -570,6 +701,220 @@ public class Program
                         string targetPath = root.TryGetProperty("path", out var tp) ? tp.GetString() ?? string.Empty : string.Empty;
                         MotionLauncherService.LaunchApp(targetPath);
                     }
+                    else if (action == "openElectronLog")
+                    {
+                        string targetPath = root.TryGetProperty("path", out var tp) ? tp.GetString() ?? string.Empty : string.Empty;
+                        MotionLauncherService.OpenElectronLog(targetPath);
+                    }
+                    else if (action == "switchLauncherUiTheme")
+                    {
+                        string targetPath = root.TryGetProperty("path", out var tp) ? tp.GetString() ?? string.Empty : string.Empty;
+                        string theme = root.TryGetProperty("theme", out var th) ? th.GetString() ?? "v2" : "v2";
+                        SettingsManager.Update(s => s.MotionLauncherUiTheme = theme);
+                        var (ok, msg) = LauncherPatcherService.SwitchLauncherUiTheme(targetPath, theme);
+                        var payload = new
+                        {
+                            @event = "launcherUiThemeSwitched",
+                            success = ok,
+                            message = msg,
+                            theme
+                        };
+                        window.SendWebMessage(JsonSerializer.Serialize(payload, JsonOpts));
+                    }
+                    else if (action == "checkDeveloperStatus")
+                    {
+                        var payload = new
+                        {
+                            @event = "developerStatus",
+                            active = Guard.GuardManager.IsDeveloperModeActive,
+                            hwAllowed = Guard.GuardManager.CheckHardwareAllowed(),
+                            hwSummary = Guard.GuardManager.GetHardwareSummary()
+                        };
+                        window.SendWebMessage(JsonSerializer.Serialize(payload, JsonOpts));
+                    }
+                    else if (action == "browseAnyExeFile")
+                    {
+                        string currentPath = root.TryGetProperty("currentPath", out var cp) ? cp.GetString() ?? string.Empty : string.Empty;
+                        string? selected = null;
+                        var t = new Thread(() =>
+                        {
+                            using var ofd = new OpenFileDialog
+                            {
+                                Title = "Выберите любой 32-битный исполняемый файл для LAA патчинга (*.exe)",
+                                Filter = "Исполняемые файлы (*.exe)|*.exe|Все файлы (*.*)|*.*",
+                                AutoUpgradeEnabled = true
+                            };
+                            if (!string.IsNullOrWhiteSpace(currentPath) && File.Exists(currentPath))
+                            {
+                                ofd.InitialDirectory = Path.GetDirectoryName(currentPath);
+                                ofd.FileName = Path.GetFileName(currentPath);
+                            }
+                            if (ofd.ShowDialog() == DialogResult.OK && !string.IsNullOrWhiteSpace(ofd.FileName))
+                            {
+                                selected = ofd.FileName;
+                            }
+                        });
+                        t.SetApartmentState(ApartmentState.STA);
+                        t.Start();
+                        t.Join();
+
+                        if (!string.IsNullOrEmpty(selected))
+                        {
+                            var inspection = LauncherPatcherService.InspectExeLAA(selected);
+                            var payload = new
+                            {
+                                @event = "standaloneExeSelected",
+                                success = true,
+                                filePath = selected,
+                                inspection = inspection
+                            };
+                            window.SendWebMessage(JsonSerializer.Serialize(payload, JsonOpts));
+                        }
+                    }
+                    else if (action == "inspectStandaloneExe")
+                    {
+                        string targetPath = root.TryGetProperty("filePath", out var fp) ? fp.GetString() ?? string.Empty : string.Empty;
+                        var inspection = LauncherPatcherService.InspectExeLAA(targetPath);
+                        var payload = new
+                        {
+                            @event = "standaloneExeInspected",
+                            success = inspection.Exists,
+                            filePath = targetPath,
+                            inspection = inspection
+                        };
+                        window.SendWebMessage(JsonSerializer.Serialize(payload, JsonOpts));
+                    }
+                    else if (action == "applyStandaloneLaa")
+                    {
+                        string targetPath = root.TryGetProperty("filePath", out var fp) ? fp.GetString() ?? string.Empty : string.Empty;
+                        bool ok = LauncherPatcherService.ApplyLargeAddressAware(targetPath, out string msg);
+                        var inspection = LauncherPatcherService.InspectExeLAA(targetPath);
+                        var payload = new
+                        {
+                            @event = "applyStandaloneLaaResult",
+                            success = ok,
+                            message = msg,
+                            inspection = inspection
+                        };
+                        window.SendWebMessage(JsonSerializer.Serialize(payload, JsonOpts));
+                    }
+                    else if (action == "restoreStandaloneExeBackup")
+                    {
+                        string targetPath = root.TryGetProperty("filePath", out var fp) ? fp.GetString() ?? string.Empty : string.Empty;
+                        bool ok = LauncherPatcherService.RestoreExeBackup(targetPath, out string msg);
+                        var inspection = LauncherPatcherService.InspectExeLAA(targetPath);
+                        var payload = new
+                        {
+                            @event = "restoreStandaloneExeResult",
+                            success = ok,
+                            message = msg,
+                            inspection = inspection
+                        };
+                        window.SendWebMessage(JsonSerializer.Serialize(payload, JsonOpts));
+                    }
+                    else if (action == "launchStandaloneExe")
+                    {
+                        string targetPath = root.TryGetProperty("filePath", out var fp) ? fp.GetString() ?? string.Empty : string.Empty;
+                        bool launched = false;
+                        string msg = string.Empty;
+                        try
+                        {
+                            if (File.Exists(targetPath))
+                            {
+                                var psi = new ProcessStartInfo
+                                {
+                                    FileName = targetPath,
+                                    WorkingDirectory = Path.GetDirectoryName(targetPath) ?? string.Empty,
+                                    UseShellExecute = true
+                                };
+                                Process.Start(psi);
+                                launched = true;
+                                msg = $"Процесс {Path.GetFileName(targetPath)} успешно запущен!";
+                            }
+                            else
+                            {
+                                msg = "Исполняемый файл не найден.";
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            msg = $"Ошибка запуска: {ex.Message}";
+                        }
+                        var payload = new
+                        {
+                            @event = "launchStandaloneExeResult",
+                            success = launched,
+                            message = msg
+                        };
+                        window.SendWebMessage(JsonSerializer.Serialize(payload, JsonOpts));
+                    }
+                    else if (action == "unlockDeveloperMode")
+                    {
+                        string pwd = root.TryGetProperty("password", out var pw) ? pw.GetString() ?? string.Empty : string.Empty;
+                        bool wasActive = Guard.GuardManager.IsDeveloperModeActive;
+                        bool isHw = Guard.GuardManager.CheckHardwareAllowed();
+
+                        if (!isHw)
+                        {
+                            Guard.GuardManager.SetDeveloperMode(false);
+                            var payload = new
+                            {
+                                @event = "developerUnlockResult",
+                                success = false,
+                                active = false,
+                                hwAllowed = false,
+                                toggled = "off",
+                                message = "Отказ в доступе: режим разработчика аппаратно привязан к доверенному оборудованию."
+                            };
+                            window.SendWebMessage(JsonSerializer.Serialize(payload, JsonOpts));
+                        }
+                        else if (wasActive)
+                        {
+                                                        Guard.GuardManager.SetDeveloperMode(false);
+                            var payload = new
+                            {
+                                @event = "developerUnlockResult",
+                                success = true,
+                                active = false,
+                                hwAllowed = true,
+                                toggled = "off",
+                                message = "Режим разработчика выключен. Защита лаунчера и игры ВКЛЮЧЕНА!"
+                            };
+                            window.SendWebMessage(JsonSerializer.Serialize(payload, JsonOpts));
+                        }
+                        else
+                        {
+                                                        bool success = Guard.GuardManager.AuthenticateDeveloper(pwd);
+                            var payload = new
+                            {
+                                @event = "developerUnlockResult",
+                                success = success,
+                                active = Guard.GuardManager.IsDeveloperModeActive,
+                                hwAllowed = true,
+                                toggled = success ? "on" : "none",
+                                message = success
+                                    ? $"Режим разработчика активирован ({Guard.GuardManager.GetHardwareSummary()})! Защита лаунчера и игры отключена."
+                                    : "Неверный пароль доступа разработчика!"
+                            };
+                            window.SendWebMessage(JsonSerializer.Serialize(payload, JsonOpts));
+                        }
+                    }
+                    else if (action == "toggleDeveloperMode")
+                    {
+                        bool enable = root.TryGetProperty("enable", out var en) && en.GetBoolean();
+                        if (Guard.GuardManager.CheckHardwareAllowed())
+                        {
+                            Guard.GuardManager.SetDeveloperMode(enable);
+                        }
+                        var payload = new
+                        {
+                            @event = "developerStatus",
+                            active = Guard.GuardManager.IsDeveloperModeActive,
+                            hwAllowed = Guard.GuardManager.CheckHardwareAllowed(),
+                            hwSummary = Guard.GuardManager.GetHardwareSummary()
+                        };
+                        window.SendWebMessage(JsonSerializer.Serialize(payload, JsonOpts));
+                    }
                 }
             }
             catch (Exception ex)
@@ -740,8 +1085,13 @@ public class DiagnosticsService
 
     private static GpuInfo GetGpuInfo()
     {
-        string gpuName = "NVIDIA GeForce RTX 3060 Ti";
-        string driverVersion = "32.0.15.9186";
+        if (GpuMockService.IsMockActive())
+        {
+            return GpuMockService.CreateGpuInfo();
+        }
+
+        string gpuName = "Стандартный графический адаптер";
+        string driverVersion = "Не определено";
         long vramBytes = 0;
 
         try
@@ -755,7 +1105,14 @@ public class DiagnosticsService
                 if (name.Contains("Parsec", StringComparison.OrdinalIgnoreCase) ||
                     name.Contains("Virtual Desktop", StringComparison.OrdinalIgnoreCase) ||
                     name.Contains("RDP", StringComparison.OrdinalIgnoreCase) ||
-                    name.Contains("Basic Display", StringComparison.OrdinalIgnoreCase))
+                    name.Contains("Basic Display", StringComparison.OrdinalIgnoreCase) ||
+                    name.Contains("MuMu", StringComparison.OrdinalIgnoreCase) ||
+                    name.Contains("VirtualBox", StringComparison.OrdinalIgnoreCase) ||
+                    name.Contains("VMware", StringComparison.OrdinalIgnoreCase) ||
+                    name.Contains("VNC", StringComparison.OrdinalIgnoreCase) ||
+                    name.Contains("Citrix", StringComparison.OrdinalIgnoreCase) ||
+                    name.Contains("Remote", StringComparison.OrdinalIgnoreCase) ||
+                    name.Contains("Indirect", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -784,69 +1141,50 @@ public class DiagnosticsService
 
         var (vulkanFound, vulkanVersion) = CheckVulkanLoader();
 
-        var dxvkCompat = new DxvkMatrix
-        {
-            Dxvk1103 = new DxvkTier
-            {
-                Version = "DXVK 1.10.3",
-                Specification = "Vulkan 1.1 Baseline (Legacy D3D9)",
-                Status = "compatible",
-                BadgeKey = "gpu.dxvk1103_badge"
-            },
-            Dxvk23 = new DxvkTier
-            {
-                Version = "DXVK 2.3",
-                Specification = "Vulkan 1.3 Baseline",
-                Status = "compatible",
-                BadgeKey = "gpu.dxvk23_badge"
-            },
-            Dxvk30 = new DxvkTier
-            {
-                Version = "DXVK 3.0",
-                Specification = "Vulkan Extended Dynamic State",
-                Status = "supported",
-                BadgeKey = "gpu.dxvk30_badge"
-            },
-            Dxvk311 = new DxvkTier
-            {
-                Version = "DXVK 3.1.1",
-                Specification = "Актуальная: расширенные пайплайны",
-                Status = "recommended",
-                BadgeKey = "gpu.dxvk311_badge"
-            }
-        };
-
-        return new GpuInfo
+        var gpuInfo = new GpuInfo
         {
             Model = gpuName,
             Vram = vramFormatted,
             DriverVersion = cleanDriver,
             DirectXSupport = "DirectX 12 (FL 12_2 Ultimate)",
-            VulkanSupport = vulkanFound ? $"Vulkan Loader {vulkanVersion}" : "Vulkan 1.3/1.4 Compatible",
+            VulkanSupport = vulkanFound ? $"Vulkan Loader {vulkanVersion} (vulkan-1.dll)" : "Vulkan не поддерживается",
             VulkanLoaderVersion = vulkanVersion,
             VulkanFound = vulkanFound,
-            DxvkCompat = dxvkCompat,
-            VerdictTextKey = "gpu.verdict_text",
-            VerdictDescKey = "gpu.verdict_desc"
+            IsMock = false,
+            MockPresetId = "real"
         };
+
+        GpuMockService.CalculateRealGpuCompatibility(gpuInfo);
+        return gpuInfo;
     }
 
     private static CpuInfo GetCpuInfo()
     {
-        string cpuName = "AMD Ryzen 5 2600 Six-Core Processor";
-        int cores = 6;
-        int threads = 12;
-        int clockMhz = 3400;
+        string cpuName = "Не определено";
+        try
+        {
+            using var cpuKey = Registry.LocalMachine.OpenSubKey(@"HARDWARE\DESCRIPTION\System\CentralProcessor\0");
+            if (cpuKey != null)
+            {
+                cpuName = cpuKey.GetValue("ProcessorNameString")?.ToString()?.Trim() ?? cpuName;
+            }
+        }
+        catch {}
+
+        int cores = Environment.ProcessorCount > 1 ? Environment.ProcessorCount / 2 : 1;
+        int threads = Environment.ProcessorCount;
+        int clockMhz = 3200;
 
         try
         {
             using var searcher = new ManagementObjectSearcher("SELECT Name, NumberOfCores, NumberOfLogicalProcessors, MaxClockSpeed FROM Win32_Processor");
             foreach (ManagementObject obj in searcher.Get())
             {
-                cpuName = obj["Name"]?.ToString()?.Trim() ?? cpuName;
-                if (obj["NumberOfCores"] != null && int.TryParse(obj["NumberOfCores"]?.ToString(), out int c)) cores = c;
-                if (obj["NumberOfLogicalProcessors"] != null && int.TryParse(obj["NumberOfLogicalProcessors"]?.ToString(), out int t)) threads = t;
-                if (obj["MaxClockSpeed"] != null && int.TryParse(obj["MaxClockSpeed"]?.ToString(), out int spd)) clockMhz = spd;
+                string wmiName = obj["Name"]?.ToString()?.Trim() ?? "";
+                if (!string.IsNullOrWhiteSpace(wmiName)) cpuName = wmiName;
+                if (obj["NumberOfCores"] != null && int.TryParse(obj["NumberOfCores"]?.ToString(), out int c) && c > 0) cores = c;
+                if (obj["NumberOfLogicalProcessors"] != null && int.TryParse(obj["NumberOfLogicalProcessors"]?.ToString(), out int t) && t > 0) threads = t;
+                if (obj["MaxClockSpeed"] != null && int.TryParse(obj["MaxClockSpeed"]?.ToString(), out int spd) && spd > 0) clockMhz = spd;
                 break;
             }
         }
@@ -879,11 +1217,11 @@ public class DiagnosticsService
 
     private static DisplayInfo GetDisplayInfo()
     {
-        string model = "Acer KG271U X1 (27\" QHD Gaming Display)";
-        int width = 2560;
-        int height = 1440;
-        int currentHz = 200;
-        int maxHz = 200;
+        string model = "Стандартный дисплей";
+        int width = 1920;
+        int height = 1080;
+        int currentHz = 60;
+        int maxHz = 60;
         int bitsPerPixel = 32;
 
         try
@@ -898,6 +1236,12 @@ public class DiagnosticsService
                 string manName = manArr != null ? new string(manArr.Where(c => c > 0).Select(c => (char)c).ToArray()).Trim() : "";
 
                 if (manName.Equals("ACR", StringComparison.OrdinalIgnoreCase)) manName = "Acer";
+                if (manName.Equals("GSM", StringComparison.OrdinalIgnoreCase)) manName = "LG";
+                if (manName.Equals("SAM", StringComparison.OrdinalIgnoreCase)) manName = "Samsung";
+                if (manName.Equals("DEL", StringComparison.OrdinalIgnoreCase)) manName = "Dell";
+                if (manName.Equals("AOC", StringComparison.OrdinalIgnoreCase)) manName = "AOC";
+                if (manName.Equals("BNQ", StringComparison.OrdinalIgnoreCase)) manName = "BenQ";
+                if (manName.Equals("ASU", StringComparison.OrdinalIgnoreCase)) manName = "ASUS";
 
                 if (!string.IsNullOrEmpty(friendlyName))
                 {
@@ -1089,7 +1433,7 @@ public class DiagnosticsService
         sb.AppendLine("<head>");
         sb.AppendLine("  <meta charset=\"UTF-8\">");
         sb.AppendLine("  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">");
-        sb.AppendLine("  <title>SAPatcher - System Diagnostics Report</title>");
+        sb.AppendLine("  <title>SAPatcher 2.0 - System Diagnostics Report</title>");
         sb.AppendLine("  <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">");
         sb.AppendLine("  <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>");
         sb.AppendLine("  <link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap\" rel=\"stylesheet\">");
@@ -1236,7 +1580,7 @@ public class DiagnosticsService
         sb.AppendLine("  <div class=\"container\">");
         sb.AppendLine("    <div class=\"header\">");
         sb.AppendLine("      <div>");
-        sb.AppendLine("        <div class=\"brand-title\">SAPatcher Diagnostics Report</div>");
+        sb.AppendLine("        <div class=\"brand-title\">SAPatcher 2.0 Diagnostics Report</div>");
         sb.AppendLine("        <div class=\"brand-slogan\">A utility that changes the course of the game on modern PCs in the old GTA SA</div>");
         sb.AppendLine("      </div>");
         sb.AppendLine("      <div class=\"meta-box\">");
@@ -1329,7 +1673,7 @@ public class DiagnosticsService
         sb.AppendLine("    </div>");
         sb.AppendLine("");
         sb.AppendLine("    <div class=\"footer\">");
-        sb.AppendLine("      <span>Generated by SAPatcher v1.0.0</span>");
+        sb.AppendLine("      <span>SAPatcher v2.0.0</span>");
         sb.AppendLine("      <span>Report saved automatically in English format.</span>");
         sb.AppendLine("    </div>");
         sb.AppendLine("  </div>");
@@ -1481,6 +1825,18 @@ public class GpuInfo
 
     [JsonPropertyName("verdictDescKey")]
     public string VerdictDescKey { get; set; } = string.Empty;
+
+    [JsonPropertyName("badgeText")]
+    public string BadgeText { get; set; } = string.Empty;
+
+    [JsonPropertyName("badgeClass")]
+    public string BadgeClass { get; set; } = string.Empty;
+
+    [JsonPropertyName("isMock")]
+    public bool IsMock { get; set; }
+
+    [JsonPropertyName("mockPresetId")]
+    public string MockPresetId { get; set; } = string.Empty;
 }
 
 public class DxvkMatrix
@@ -1822,18 +2178,6 @@ public static class MotionLauncherService
             }
 
             response.Logs.Add($"[DIR] Рабочая директория Motion Launcher: {targetDir}");
-            response.Logs.Add($"[DXVK] Выбрана ветка транслятора: DXVK {request.DxvkVersion} (32-бит)");
-
-            byte[]? d3d9Bytes = LauncherPatcherService.ExtractDxvk32BitD3D9(request.DxvkVersion, out var archivePath, out var extractLog);
-            if (d3d9Bytes == null)
-            {
-                response.Success = false;
-                response.Message = $"Ошибка извлечения 32-битного d3d9.dll из архива dxvk-{request.DxvkVersion}.tar.gz: {extractLog}";
-                response.Logs.Add($"[ERROR] {response.Message}");
-                return response;
-            }
-            response.Logs.Add($"[ARCHIVE] Использован пакет: {archivePath}");
-            response.Logs.Add($"[DXVK_32BIT] {extractLog}");
 
             string? gameDir = LauncherPatcherService.ResolveGamePath(request.GamePath);
             if (string.IsNullOrEmpty(gameDir) || !Directory.Exists(gameDir))
@@ -1846,9 +2190,46 @@ public static class MotionLauncherService
 
             response.Logs.Add($"[GAME_DIR] Папка игры определена: {gameDir}");
 
-            string gameD3D9 = Path.Combine(gameDir, "d3d9.dll");
-            File.WriteAllBytes(gameD3D9, d3d9Bytes);
-            response.Logs.Add($"[DEPLOY] 32-битная библиотека d3d9.dll установлена в корень игры рядом с motion.exe и samp.exe: {gameD3D9} ({d3d9Bytes.Length:N0} Б)");
+            bool isDxvkDisabled = string.Equals(request.DxvkVersion, "none", StringComparison.OrdinalIgnoreCase) ||
+                                  string.IsNullOrEmpty(request.DxvkVersion);
+
+            if (isDxvkDisabled)
+            {
+                response.Logs.Add("[DXVK_GUARD] Развертывание транслятора DXVK отключено: видеокарта не поддерживает Vulkan API.");
+                string gameD3D9 = Path.Combine(gameDir, "d3d9.dll");
+                if (File.Exists(gameD3D9))
+                {
+                    try
+                    {
+                        File.Delete(gameD3D9);
+                        response.Logs.Add($"[CLEANUP] Удалена сторонняя библиотека d3d9.dll ({gameD3D9}) во избежание сбоев D3D9.");
+                    }
+                    catch {}
+                }
+                string gameConf = Path.Combine(gameDir, "dxvk.conf");
+                if (File.Exists(gameConf))
+                {
+                    try { File.Delete(gameConf); } catch {}
+                }
+            }
+            else
+            {
+                response.Logs.Add($"[DXVK] Выбрана ветка транслятора: DXVK {request.DxvkVersion} (32-бит)");
+
+                byte[]? d3d9Bytes = LauncherPatcherService.ExtractDxvk32BitD3D9(request.DxvkVersion, out var archivePath, out var extractLog);
+                if (d3d9Bytes == null)
+                {
+                    response.Success = false;
+                    response.Message = $"Ошибка извлечения 32-битного d3d9.dll из архива dxvk-{request.DxvkVersion}.tar.gz: {extractLog}";
+                    response.Logs.Add($"[ERROR] {response.Message}");
+                    return response;
+                }
+                response.Logs.Add($"[ARCHIVE] Использован пакет: {archivePath}");
+                response.Logs.Add($"[DXVK_32BIT] {extractLog}");
+
+                string gameD3D9 = Path.Combine(gameDir, "d3d9.dll");
+                File.WriteAllBytes(gameD3D9, d3d9Bytes);
+                response.Logs.Add($"[DEPLOY] 32-битная библиотека d3d9.dll установлена в корень игры рядом с motion.exe и samp.exe: {gameD3D9} ({d3d9Bytes.Length:N0} Б)");
 
             if (Directory.Exists(targetDir))
             {
@@ -1979,6 +2360,7 @@ public static class MotionLauncherService
                 }
                 catch {}
             }
+            }
 
             if (request.Enable4gbPatch)
             {
@@ -2020,9 +2402,18 @@ public static class MotionLauncherService
                 response.Logs.Add($"[GAME_GUARD] Патч 4 ГБ: motion.exe: {(finalCheck.LaaMotionEnabled ? "ДА" : "НЕТ")}, samp.exe: {(finalCheck.LaaSampEnabled ? "ДА" : "НЕТ")}");
             }
 
-            response.Logs.Add("[READY] Пакет оптимизации DXVK (32-бит) и 4GB LAA успешно установлен!");
-            response.Success = true;
-            response.Message = $"Оптимизация DXVK {request.DxvkVersion} (32-бит) и 4GB LAA успешно установлена для Motion Project.";
+            if (isDxvkDisabled)
+            {
+                response.Logs.Add("[READY] Патч 4GB LAA успешно применен (DXVK отключен для совместимости с GPU).");
+                response.Success = true;
+                response.Message = "Патч 4 ГБ ОЗУ (LAA) успешно применен. Транслятор DXVK отключен из-за отсутствия поддержки Vulkan на GPU.";
+            }
+            else
+            {
+                response.Logs.Add("[READY] Пакет оптимизации DXVK (32-бит) и 4GB LAA успешно установлен!");
+                response.Success = true;
+                response.Message = $"Оптимизация DXVK {request.DxvkVersion} (32-бит) и 4GB LAA успешно установлена для Motion Project.";
+            }
         }
         catch (Exception ex)
         {
@@ -2032,6 +2423,48 @@ public static class MotionLauncherService
         }
 
         return response;
+    }
+
+    public static void OpenElectronLog(string path)
+    {
+        try
+        {
+            string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string[] candidates = new[]
+            {
+                !string.IsNullOrWhiteSpace(path) ? Path.Combine(path, "SAPatcher_Electron.log") : string.Empty,
+                !string.IsNullOrWhiteSpace(path) ? Path.Combine(path, "resources", "app", "SAPatcher_Electron.log") : string.Empty,
+                Path.Combine(localAppData, "motion-launcher", "SAPatcher_Electron.log"),
+                Path.Combine(localAppData, "motion-launcher", "app-2.0.0", "SAPatcher_Electron.log"),
+                Path.Combine(localAppData, "motion-launcher", "app-2.0.0", "resources", "app", "SAPatcher_Electron.log"),
+                Path.Combine(localAppData, "motion-launcher", "app-1.2.46", "SAPatcher_Electron.log"),
+                Path.Combine(localAppData, "motion-launcher", "app-1.2.46", "resources", "app", "SAPatcher_Electron.log")
+            };
+
+            string? found = candidates.Where(c => !string.IsNullOrEmpty(c) && File.Exists(c)).FirstOrDefault();
+            if (found == null)
+            {
+                string fallback = Path.Combine(localAppData, "motion-launcher", "SAPatcher_Electron.log");
+                try
+                {
+                    if (!File.Exists(fallback))
+                    {
+                        File.WriteAllText(fallback, $"[INFO] SAPatcher Electron Log initialized at {DateTime.Now}\r\n[INFO] Ожидание первого запуска пропатченного Motion Launcher...\r\n");
+                    }
+                    found = fallback;
+                }
+                catch {}
+            }
+
+            if (!string.IsNullOrEmpty(found) && File.Exists(found))
+            {
+                Process.Start(new ProcessStartInfo(found) { UseShellExecute = true });
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[OpenElectronLog] Error: {ex.Message}");
+        }
     }
 
     public static void OpenFolder(string path)

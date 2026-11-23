@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAPatcher Game Overlay</title>
+  <style>
+    :root {
+      --bg-glass: rgba(15, 20, 32, 0.90);
+      --bg-card: rgba(24, 30, 48, 0.88);
+      --border-cyan: rgba(0, 240, 255, 0.55);
+      --border-glow: rgba(0, 240, 255, 0.3);
+      --accent-cyan: #00f0ff;
+      --accent-magenta: #ff007f;
+      --accent-gold: #ffb400;
+      --accent-green: #00ff88;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: transparent !important;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: var(--text-main);
+    }
+
+    /* Full-Screen Container */
+    #overlayRoot {
+      display: none !important;
+      position: relative;
+      width: 100%;
+      height: 100%;
+      pointer-events: auto;
+    }
+
+    body.interactive-mode #overlayRoot {
+      display: block !important;
+    }
+
+    body {
+      cursor: default;
+    }
+
+    button, input {
+      cursor: pointer;
+    }
+
+    /* FULL-SCREEN BACKDROP BLUR WHEN OVERLAY IS OPEN */
+    #gameBackdropBlur {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      backdrop-filter: blur(14px) brightness(0.60);
+      -webkit-backdrop-filter: blur(14px) brightness(0.60);
+      background: rgba(10, 14, 26, 0.45);
+      opacity: 0;
+      display: none !important;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+      z-index: 5;
+    }
+
+    body.interactive-mode #gameBackdropBlur {
+      display: block !important;
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Top Hint Bar */
+    .hint-bar {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--border-cyan);
+      box-shadow: 0 4px 24px rgba(0, 240, 255, 0.35);
+      padding: 7px 20px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent-cyan);
+      display: none;
+      align-items: center;
+      gap: 8px;
+      z-index: 1000;
+      backdrop-filter: blur(10px);
+      animation: pulseGlow 2s infinite alternate;
+    }
+
+    body.interactive-mode .hint-bar {
+      display: flex;
+    }
+
+    @keyframes pulseGlow {
+      from { box-shadow: 0 0 10px rgba(0, 240, 255, 0.2); }
+      to { box-shadow: 0 0 24px rgba(0, 240, 255, 0.65); }
+    }
+
+    /* 1. Locked Badge: SAPatcher-1.1.0-Beta */
+    .overlay-badge {
+      position: absolute;
+      top: 24px;
+      left: 24px;
+      background: var(--bg-glass);
+      border: 1px solid var(--border-cyan);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.65), 0 0 16px var(--border-glow);
+      border-radius: 12px;
+      padding: 10px 14px;
+      backdrop-filter: blur(16px);
+      z-index: 500;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 290px;
+      cursor: grab;
+      transition: box-shadow 0.2s;
+    }
+
+    body.interactive-mode .overlay-badge:active {
+      cursor: grabbing;
+    }
+
+    .badge-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .gear-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: rgba(255, 180, 0, 0.18);
+      border: 1px solid rgba(255, 180, 0, 0.5);
+      color: var(--accent-gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      transition: all 0.2s;
+    }
+
+    .gear-btn:hover {
+      background: rgba(255, 180, 0, 0.35);
+      transform: rotate(35deg) scale(1.1);
+      box-shadow: 0 0 14px rgba(255, 180, 0, 0.6);
+    }
+
+    .gear-btn.active {
+      background: var(--accent-gold);
+      color: #000;
+      box-shadow: 0 0 16px rgba(255, 180, 0, 0.8);
+    }
+
+    .add-widget-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: rgba(0, 240, 255, 0.2);
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: bold;
+      transition: all 0.2s;
+      animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .add-widget-btn.visible {
+      display: flex;
+    }
+
+    .add-widget-btn:hover {
+      background: var(--accent-cyan);
+      color: #000;
+      transform: scale(1.12);
+      box-shadow: 0 0 14px rgba(0, 240, 255, 0.8);
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.4); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .badge-title {
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+      color: var(--accent-cyan);
+      text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+      flex: 1;
+    }
+
+    .badge-drag-hint {
+      font-size: 10px;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.08);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .badge-stats {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 4px;
+    }
+
+    .stat-green {
+      color: var(--accent-green);
+      font-weight: 600;
+    }
+
+    .stat-fps {
+      color: #fff;
+      font-family: monospace;
+      font-weight: bold;
+    }
+
+    /* Widget Catalog Popover */
+    .widget-catalog {
+      position: absolute;
+      top: 90px;
+      left: 24px;
+      background: var(--bg-glass);
+      border: 1px solid var(--accent-cyan);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 240, 255, 0.35);
+      border-radius: 12px;
+      padding: 12px;
+      backdrop-filter: blur(16px);
+      z-index: 600;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 260px;
+      animation: popIn 0.2s ease-out;
+    }
+
+    .widget-catalog.open {
+      display: flex;
+    }
+
+    .catalog-title {
+      font-size: 12px;
+      font-weight: bold;
+      color: var(--accent-cyan);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+      padding-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .catalog-close-btn {
+      color: var(--text-muted);
+      font-size: 14px;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .catalog-close-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .catalog-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: all 0.2s;
+    }
+
+    .catalog-item:hover {
+      background: rgba(0, 240, 255, 0.15);
+      border-color: var(--accent-cyan);
+      transform: translateX(4px);
+    }
+
+    .catalog-icon {
+      font-size: 18px;
+    }
+
+    .catalog-info h4 {
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .catalog-info p {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    /* 2. REAL SMTC MEDIA PLAYER WIDGET (Windows 11 Action Center style) */
+    .smtc-widget {
+      position: absolute;
+      top: 140px;
+      left: 24px;
+      width: 440px;
+      background: var(--bg-glass);
+      border: 1px solid rgba(0, 240, 255, 0.45);
+      box-shadow: 0 14px 44px rgba(0, 0, 0, 0.75), 0 0 24px rgba(0, 240, 255, 0.2);
+      border-radius: 18px;
+      backdrop-filter: blur(20px);
+      z-index: 550;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transform-origin: top left;
+      transition: transform 0.1s, box-shadow 0.2s;
+    }
+
+    .smtc-widget.hidden {
+      display: none;
+    }
+
+    .smtc-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px 8px;
+      background: rgba(15, 23, 42, 0.75);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      cursor: grab;
+    }
+
+    body.interactive-mode .smtc-header:active {
+      cursor: grabbing;
+    }
+
+    /* App badge with icon & chevron (like Google Chrome > in Windows 11) */
+    .smtc-app-badge {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #e2e8f0;
+      letter-spacing: 0.3px;
+    }
+
+    .smtc-app-icon {
+      font-size: 14px;
+      color: var(--accent-cyan);
+    }
+
+    .smtc-app-chevron {
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+
+    .smtc-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .scale-btn {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      transition: all 0.15s;
+    }
+
+    .scale-btn:hover {
+      background: rgba(0, 240, 255, 0.3);
+      border-color: var(--accent-cyan);
+    }
+
+    /* Minus/Close button in top-right corner to delete widget */
+    .widget-close-btn {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 50, 80, 0.4);
+      background: rgba(255, 50, 80, 0.15);
+      color: #ff4d6d;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+
+    .widget-close-btn:hover {
+      background: #ff3355;
+      color: #fff;
+      transform: scale(1.1);
+      box-shadow: 0 0 12px rgba(255, 51, 85, 0.6);
+    }
+
+    .smtc-body {
+      padding: 14px 16px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Media Info & Album Art Row (Layout matching user screenshot) */
+    .track-details-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .track-meta {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .track-title {
+      font-size: 16px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: #ffffff;
+      text-shadow: 0 0 12px rgba(255, 255, 255, 0.2);
+    }
+
+    .track-artist {
+      font-size: 13px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* REAL ALBUM COVER (matches photo on the right!) */
+    .album-cover-box {
+      width: 72px;
+      height: 72px;
+      border-radius: 10px;
+      background: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55);
+      overflow: hidden;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .album-cover-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+    }
+
+    .album-cover-placeholder {
+      font-size: 28px;
+      color: var(--accent-cyan);
+    }
+
+    /* Equalizer Soundwave - 5 Reactive Bars exactly like in photo */
+    .equalizer-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      height: 26px;
+      margin: 4px 0 2px;
+    }
+
+    .eq-bar {
+      width: 5px;
+      background: linear-gradient(180deg, #00f0ff 0%, #3b82f6 60%, #6366f1 100%);
+      border-radius: 9999px;
+      min-height: 4px;
+      height: 4px;
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.55);
+      transition: height 0.05s ease-out;
+    }
+
+    /* Centered Playback Controls (Matching Windows 11 SMTC: Prev, Play/Pause, Next) */
+    .controls-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      margin-top: 4px;
+    }
+
+    .ctrl-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 50%;
+      width: 38px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 15px;
+      transition: all 0.2s;
+    }
+
+    .ctrl-btn:hover {
+      background: rgba(0, 240, 255, 0.25);
+      border-color: var(--accent-cyan);
+      transform: scale(1.1);
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.45);
+    }
+
+    .ctrl-btn.play-btn {
+      width: 46px;
+      height: 46px;
+      background: #ffffff;
+      border-color: #ffffff;
+      color: #000000;
+      font-size: 18px;
+      box-shadow: 0 0 18px rgba(255, 255, 255, 0.4);
+    }
+
+    .ctrl-btn.play-btn:hover {
+      background: var(--accent-cyan);
+      border-color: var(--accent-cyan);
+      transform: scale(1.14);
+      box-shadow: 0 0 24px rgba(0, 240, 255, 0.8);
+    }
+
+    /* Volume Row */
+    .volume-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 2px;
+      padding-top: 6px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .vol-icon {
+      font-size: 13px;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .vol-slider {
+      -webkit-appearance: none;
+      width: 80px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 2px;
+      outline: none;
+    }
+
+    .vol-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+    }
+
+    /* Corner Resize Handle */
+    .resize-handle {
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      width: 16px;
+      height: 16px;
+      cursor: se-resize;
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Fullscreen game blur layer when overlay is open -->
+  <div id="gameBackdropBlur"></div>
+
+  <div id="overlayRoot">
+    <!-- Top Interactive Hint Bar -->
+    <div class="hint-bar" id="hintBar">
+      <span>⚡ F11 Режим управления оверлеем активен • Нажмите F11 для возврата в игру</span>
+    </div>
+
+    <!-- 1. The Badge: SAPatcher-1.1.0-Beta (Title locked, can only be moved) -->
+    <div class="overlay-badge interactive-element" id="overlayBadge">
+      <div class="badge-header">
+        <button class="gear-btn" id="gearBtn" title="Настройки оверлея">⚙</button>
+        <button class="add-widget-btn" id="addWidgetBtn" title="Добавить виджет">+</button>
+        <span class="badge-title">SAPatcher-1.1.0-Beta</span>
+        <span class="badge-drag-hint">DRAG</span>
+      </div>
+      <div class="badge-stats">
+        <span class="stat-green">Vulkan D3D9 Active</span>
+        <span class="stat-fps" id="badgeFps">60.0 FPS</span>
+      </div>
+    </div>
+
+    <!-- Widget Catalog Popover -->
+    <div class="widget-catalog interactive-element" id="widgetCatalog">
+      <div class="catalog-title">
+        <span>Каталог виджетов</span>
+        <span class="catalog-close-btn" id="catalogCloseBtn">✕</span>
+      </div>
+      <div class="catalog-item" id="addSmtcItem">
+        <span class="catalog-icon">🎵</span>
+        <div class="catalog-info">
+          <h4>SMTC Медиаплеер</h4>
+          <p>Системный медиаплеер Windows</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. REAL SMTC MEDIA PLAYER WIDGET -->
+    <div class="smtc-widget interactive-element" id="smtcWidget">
+      <div class="smtc-header" id="smtcHeader">
+        <!-- App name with icon (Google Chrome >) -->
+        <div class="smtc-app-badge" id="smtcAppBadge">
+          <span class="smtc-app-icon" id="smtcAppIcon">🌐</span>
+          <span id="smtcAppName">Google Chrome</span>
+          <span class="smtc-app-chevron">›</span>
+        </div>
+        <div class="smtc-actions">
+          <button class="scale-btn" id="scaleDownBtn" title="Уменьшить масштаб">−</button>
+          <button class="scale-btn" id="scaleUpBtn" title="Увеличить масштаб">+</button>
+          <!-- Minus button in top-right corner to delete widget -->
+          <button class="widget-close-btn" id="widgetCloseBtn" title="Удалить виджет">−</button>
+        </div>
+      </div>
+
+      <div class="smtc-body">
+        <div class="track-details-row">
+          <div class="track-meta">
+            <!-- Track Title (e.g. TOKYO DRIFT Twin Remix) -->
+            <div class="track-title" id="trackTitle">Ожидание музыки...</div>
+            <!-- Artist (e.g. Twin) -->
+            <div class="track-artist" id="trackArtist">Запустите плеер в Windows</div>
+          </div>
+          <!-- Real Album Cover Box on the right (like in photo!) -->
+          <div class="album-cover-box" id="albumCoverBox">
+            <img class="album-cover-img" id="albumCoverImg" alt="Album Cover">
+            <span class="album-cover-placeholder" id="albumCoverPlaceholder">🎵</span>
+          </div>
+        </div>
+
+        <!-- Equalizer Soundwave (5 Bars matching user photo) -->
+        <div class="equalizer-row" id="eqRow">
+          <div class="eq-bar" id="eqBar0"></div>
+          <div class="eq-bar" id="eqBar1"></div>
+          <div class="eq-bar" id="eqBar2"></div>
+          <div class="eq-bar" id="eqBar3"></div>
+          <div class="eq-bar" id="eqBar4"></div>
+        </div>
+
+        <!-- Centered Playback Controls: Prev, Play/Pause, Next -->
+        <div class="controls-row">
+          <button class="ctrl-btn" id="prevBtn" title="Предыдущий трек">⏮</button>
+          <button class="ctrl-btn play-btn" id="playBtn" title="Воспроизведение / Пауза">⏸</button>
+          <button class="ctrl-btn" id="nextBtn" title="Следующий трек">⏭</button>
+        </div>
+
+        <!-- Volume Row -->
+        <div class="volume-row">
+          <span class="vol-icon" id="volDownIcon">🔈</span>
+          <input type="range" min="0" max="100" value="75" class="vol-slider" id="volSlider">
+          <span class="vol-icon" id="volUpIcon">🔊</span>
+        </div>
+      </div>
+
+      <!-- Resize handle in corner -->
+      <div class="resize-handle" id="resizeHandle">◢</div>
+    </div>
+  </div>
+
+  <script>
+    let isPlaying = true;
+    let smtcScale = 1.0;
+    let isInteractive = false;
+
+    // Post message bridge to C# host
+    function sendHost(action, data = {}) {
+      try {
+        if (window.chrome && window.chrome.webview) {
+          window.chrome.webview.postMessage({ action, ...data });
+        }
+      } catch (e) {
+        console.warn("Host message error:", e);
+      }
+    }
+
+    // Toggle interactive mode from C# when F11 is pressed
+    window.setInteractiveMode = function(active) {
+      isInteractive = active;
+      if (active) {
+        document.body.classList.add('interactive-mode');
+      } else {
+        document.body.classList.remove('interactive-mode');
+        document.getElementById('widgetCatalog').classList.remove('open');
+      }
+    };
+
+    window.setOverlayOpen = function(open) {
+      window.setInteractiveMode(open);
+    };
+
+    const gameBackdropBlur = document.getElementById('gameBackdropBlur');
+    if (gameBackdropBlur) {
+      gameBackdropBlur.addEventListener('click', (e) => {
+        if (e.target === gameBackdropBlur) {
+          sendHost('close_overlay');
+        }
+      });
+    }
+
+    // Receive Real Windows SMTC State from C#
+    window.updateMediaSession = function(media) {
+      if (!media) return;
+
+      const app = media.app || media.App || '';
+      const title = media.title || media.Title || 'Ожидание музыки...';
+      const artist = media.artist || media.Artist || 'Запустите плеер в Windows';
+      const albumArt = media.albumArt || media.AlbumArt || null;
+      const playing = (media.isPlaying !== undefined) ? media.isPlaying : (media.IsPlaying || false);
+
+      const appNameEl = document.getElementById('smtcAppName');
+      const appIconEl = document.getElementById('smtcAppIcon');
+      const titleEl = document.getElementById('trackTitle');
+      const artistEl = document.getElementById('trackArtist');
+      const coverImg = document.getElementById('albumCoverImg');
+      const coverPlaceholder = document.getElementById('albumCoverPlaceholder');
+      const playBtnEl = document.getElementById('playBtn');
+      const eqRowEl = document.getElementById('eqRow');
+
+      if (app) {
+        appNameEl.textContent = app;
+        const appLow = app.toLowerCase();
+        if (appLow.includes("chrome")) appIconEl.textContent = "🌐";
+        else if (appLow.includes("spotify")) appIconEl.textContent = "🟢";
+        else if (appLow.includes("yandex") || appLow.includes("яндекс")) appIconEl.textContent = "🟡";
+        else if (appLow.includes("edge")) appIconEl.textContent = "🌊";
+        else if (appLow.includes("firefox")) appIconEl.textContent = "🦊";
+        else appIconEl.textContent = "🎵";
+      }
+
+      titleEl.textContent = title;
+      artistEl.textContent = artist;
+
+      // Real album cover display
+      if (albumArt && albumArt.startsWith("data:image")) {
+        coverImg.src = albumArt;
+        coverImg.style.display = "block";
+        coverPlaceholder.style.display = "none";
+      } else {
+        coverImg.style.display = "none";
+        coverPlaceholder.style.display = "block";
+      }
+
+      isPlaying = playing;
+      playBtnEl.textContent = isPlaying ? "⏸" : "▶";
+    };
+
+    // Real Audio Reactive Bars (5 bars reacting to real Windows audio waveform)
+    const eqBars = [
+      document.getElementById('eqBar0'),
+      document.getElementById('eqBar1'),
+      document.getElementById('eqBar2'),
+      document.getElementById('eqBar3'),
+      document.getElementById('eqBar4')
+    ];
+
+    window.updateAudioBars = function(levels) {
+      if (!Array.isArray(levels) || levels.length < 5) return;
+      for (let i = 0; i < 5; i++) {
+        if (eqBars[i]) {
+          const val = Math.max(0, Math.min(1, levels[i]));
+          const h = Math.round(4 + val * 22);
+          eqBars[i].style.height = h + 'px';
+        }
+      }
+    };
+
+    let isUserDraggingVolume = false;
+    window.setSystemVolume = function(val) {
+      const volSlider = document.getElementById('volSlider');
+      if (volSlider && !isUserDraggingVolume) {
+        volSlider.value = Math.max(0, Math.min(100, Math.round(val)));
+      }
+    };
+
+    // Elements
+    const badge = document.getElementById('overlayBadge');
+    const gearBtn = document.getElementById('gearBtn');
+    const addWidgetBtn = document.getElementById('addWidgetBtn');
+    const widgetCatalog = document.getElementById('widgetCatalog');
+    const catalogCloseBtn = document.getElementById('catalogCloseBtn');
+    const addSmtcItem = document.getElementById('addSmtcItem');
+
+    const smtcWidget = document.getElementById('smtcWidget');
+    const smtcHeader = document.getElementById('smtcHeader');
+    const scaleDownBtn = document.getElementById('scaleDownBtn');
+    const scaleUpBtn = document.getElementById('scaleUpBtn');
+    const widgetCloseBtn = document.getElementById('widgetCloseBtn');
+    const playBtn = document.getElementById('playBtn');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const volSlider = document.getElementById('volSlider');
+    const volDownIcon = document.getElementById('volDownIcon');
+    const volUpIcon = document.getElementById('volUpIcon');
+    const resizeHandle = document.getElementById('resizeHandle');
+
+    // Load saved positions
+    function loadSavedState() {
+      try {
+        const savedBadge = JSON.parse(localStorage.getItem('sap_badge_pos') || 'null');
+        if (savedBadge) {
+          badge.style.left = savedBadge.x + 'px';
+          badge.style.top = savedBadge.y + 'px';
+        }
+
+        const savedSmtc = JSON.parse(localStorage.getItem('sap_smtc_state') || 'null');
+        if (savedSmtc) {
+          smtcWidget.style.left = savedSmtc.x + 'px';
+          smtcWidget.style.top = savedSmtc.y + 'px';
+          if (savedSmtc.scale) {
+            smtcScale = savedSmtc.scale;
+            smtcWidget.style.transform = `scale(${smtcScale})`;
+          }
+          if (savedSmtc.visible === false) {
+            smtcWidget.classList.add('hidden');
+          }
+        }
+      } catch (e) {}
+    }
+
+    function saveState() {
+      try {
+        const bRect = badge.getBoundingClientRect();
+        localStorage.setItem('sap_badge_pos', JSON.stringify({ x: bRect.left, y: bRect.top }));
+
+        localStorage.setItem('sap_smtc_state', JSON.stringify({
+          x: parseInt(smtcWidget.style.left) || 24,
+          y: parseInt(smtcWidget.style.top) || 140,
+          scale: smtcScale,
+          visible: !smtcWidget.classList.contains('hidden')
+        }));
+      } catch (e) {}
+    }
+
+    // Gear button: toggle settings mode and show [+] button
+    gearBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      gearBtn.classList.toggle('active');
+      const isSettingsOpen = gearBtn.classList.contains('active');
+      if (isSettingsOpen) {
+        addWidgetBtn.classList.add('visible');
+      } else {
+        addWidgetBtn.classList.remove('visible');
+        widgetCatalog.classList.remove('open');
+      }
+    });
+
+    // Plus button: open widget catalog
+    addWidgetBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const bRect = badge.getBoundingClientRect();
+      widgetCatalog.style.left = bRect.left + 'px';
+      widgetCatalog.style.top = (bRect.bottom + 10) + 'px';
+      widgetCatalog.classList.toggle('open');
+    });
+
+    catalogCloseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      widgetCatalog.classList.remove('open');
+    });
+
+    // Add SMTC Player from catalog
+    addSmtcItem.addEventListener('click', (e) => {
+      e.stopPropagation();
+      smtcWidget.classList.remove('hidden');
+      widgetCatalog.classList.remove('open');
+      saveState();
+    });
+
+    // Minus button in top-right of SMTC: delete widget
+    widgetCloseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      smtcWidget.classList.add('hidden');
+      saveState();
+    });
+
+    // Scale buttons
+    scaleDownBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      smtcScale = Math.max(0.65, smtcScale - 0.1);
+      smtcWidget.style.transform = `scale(${smtcScale})`;
+      saveState();
+    });
+
+    scaleUpBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      smtcScale = Math.min(1.8, smtcScale + 0.1);
+      smtcWidget.style.transform = `scale(${smtcScale})`;
+      saveState();
+    });
+
+    // Playback Controls (Sends directly to Windows Media Service in C#)
+    playBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      sendHost('media_play_pause');
+    });
+
+    prevBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      sendHost('media_prev');
+    });
+
+    nextBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      sendHost('media_next');
+    });
+
+    volSlider.addEventListener('pointerdown', () => { isUserDraggingVolume = true; });
+    volSlider.addEventListener('pointerup', () => { isUserDraggingVolume = false; });
+    volSlider.addEventListener('input', (e) => {
+      e.stopPropagation();
+      const val = parseInt(e.target.value) || 0;
+      sendHost('set_volume', { value: val });
+    });
+
+    volDownIcon.addEventListener('click', (e) => {
+      e.stopPropagation();
+      sendHost('media_volume_down');
+    });
+
+    volUpIcon.addEventListener('click', (e) => {
+      e.stopPropagation();
+      sendHost('media_volume_up');
+    });
+
+    // Draggable Implementation
+    function makeDraggable(el, handle) {
+      let isDragging = false;
+      let startX, startY, initialLeft, initialTop;
+
+      handle.addEventListener('pointerdown', (e) => {
+        if (!isInteractive) return;
+        if (e.target.closest('button') || e.target.closest('input')) return;
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        initialLeft = parseInt(el.style.left) || el.offsetLeft;
+        initialTop = parseInt(el.style.top) || el.offsetTop;
+        try { handle.setPointerCapture(e.pointerId); } catch {}
+        e.preventDefault();
+      });
+
+      handle.addEventListener('pointermove', (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        el.style.left = (initialLeft + dx) + 'px';
+        el.style.top = (initialTop + dy) + 'px';
+      });
+
+      const stopDrag = (e) => {
+        if (isDragging) {
+          isDragging = false;
+          try { handle.releasePointerCapture(e.pointerId); } catch {}
+          saveState();
+        }
+      };
+
+      handle.addEventListener('pointerup', stopDrag);
+      handle.addEventListener('pointercancel', stopDrag);
+    }
+
+    makeDraggable(badge, badge);
+    makeDraggable(smtcWidget, smtcHeader);
+
+    // Corner Resize Handle for SMTC Widget
+    let isResizing = false;
+    let initialScale = 1.0;
+    let startResizeX = 0;
+
+    resizeHandle.addEventListener('pointerdown', (e) => {
+      if (!isInteractive) return;
+      e.stopPropagation();
+      isResizing = true;
+      initialScale = smtcScale;
+      startResizeX = e.clientX;
+      try { resizeHandle.setPointerCapture(e.pointerId); } catch {}
+    });
+
+    resizeHandle.addEventListener('pointermove', (e) => {
+      if (!isResizing) return;
+      const dx = e.clientX - startResizeX;
+      smtcScale = Math.max(0.65, Math.min(1.8, initialScale + (dx / 300)));
+      smtcWidget.style.transform = `scale(${smtcScale})`;
+    });
+
+    const stopResize = (e) => {
+      if (isResizing) {
+        isResizing = false;
+        try { resizeHandle.releasePointerCapture(e.pointerId); } catch {}
+        saveState();
+      }
+    };
+
+    resizeHandle.addEventListener('pointerup', stopResize);
+    resizeHandle.addEventListener('pointercancel', stopResize);
+
+    // FPS ticker
+    let frames = 0;
+    let lastTime = performance.now();
+    function fpsLoop() {
+      frames++;
+      const now = performance.now();
+      if (now - lastTime >= 1000) {
+        const fps = Math.round((frames * 1000) / (now - lastTime));
+        document.getElementById('badgeFps').textContent = fps + '.0 FPS';
+        frames = 0;
+        lastTime = now;
+      }
+      requestAnimationFrame(fpsLoop);
+    }
+    requestAnimationFrame(fpsLoop);
+
+    // Initial load
+    loadSavedState();
+  </script>
+</body>
+</html>
