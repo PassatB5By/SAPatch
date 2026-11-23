@@ -2297,6 +2297,9 @@ public static class MotionLauncherService
             }
             else
             {
+                confSb.AppendLine("# Отключение эксклюзивного полного экрана для поддержки оверлеев и мгновенного Alt+Tab");
+                confSb.AppendLine("dxvk.allowFse = False");
+                confSb.AppendLine("d3d9.enableDialogMode = True");
                 if (request.EnableSeamless)
                 {
                     confSb.AppendLine("d3d9.seamless = True");

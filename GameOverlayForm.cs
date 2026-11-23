@@ -38,6 +38,15 @@ public sealed class GameOverlayForm : Form
     private const int WM_HOTKEY = 0x0312;
     private const int HOTKEY_F11_ID = 0xF011;
 
+    private const int WH_KEYBOARD_LL = 13;
+    private const int WM_KEYDOWN = 0x0100;
+    private const int WM_SYSKEYDOWN = 0x0104;
+
+    private static LowLevelKeyboardProc? _keyboardProc;
+    private static IntPtr _hookId = IntPtr.Zero;
+
+    private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
+
     private const byte VK_VOLUME_DOWN = 0xAE;
     private const byte VK_VOLUME_UP = 0xAF;
     private const uint KEYEVENTF_KEYUP = 0x0002;
@@ -104,10 +113,25 @@ public sealed class GameOverlayForm : Form
     private static extern IntPtr GetForegroundWindow();
 
     [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
     private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
 
     [DllImport("user32.dll")]
     private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool UnhookWindowsHookEx(IntPtr hhk);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    private static extern IntPtr GetModuleHandle(string? lpModuleName);
     #endregion
 
     protected override bool ShowWithoutActivation => true;
@@ -152,6 +176,8 @@ public sealed class GameOverlayForm : Form
         // Start polling timers immediately so hotkeys and sync are responsive before webview completes init
         _syncTimer.Start();
         _mediaPollTimer.Start();
+
+        InstallKeyboardHook();
 
         InitializeOverlayAsync();
     }
@@ -208,6 +234,7 @@ public sealed class GameOverlayForm : Form
             UnregisterHotKey(Handle, HOTKEY_F11_ID);
         }
         catch {}
+        UninstallKeyboardHook();
         base.OnHandleDestroyed(e);
     }
 
@@ -216,8 +243,8 @@ public sealed class GameOverlayForm : Form
         get
         {
             CreateParams cp = base.CreateParams;
-            // WS_EX_NOACTIVATE prevents Windows from stealing foreground activation from the game
-            cp.ExStyle |= WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE;
+            // Keep topmost and toolwindow, without NOACTIVATE so it can render on top of 3D games and receive clicks
+            cp.ExStyle |= WS_EX_TOPMOST | WS_EX_TOOLWINDOW;
             return cp;
         }
     }
@@ -291,6 +318,49 @@ public sealed class GameOverlayForm : Form
         catch {}
     }
 
+    private void InstallKeyboardHook()
+    {
+        try
+        {
+            if (_hookId != IntPtr.Zero) return;
+            _keyboardProc = HookCallback;
+            using var curProcess = Process.GetCurrentProcess();
+            using var curModule = curProcess.MainModule;
+            IntPtr modHandle = curModule != null ? GetModuleHandle(curModule.ModuleName) : IntPtr.Zero;
+            _hookId = SetWindowsHookEx(WH_KEYBOARD_LL, _keyboardProc, modHandle, 0);
+        }
+        catch {}
+    }
+
+    private void UninstallKeyboardHook()
+    {
+        try
+        {
+            if (_hookId != IntPtr.Zero)
+            {
+                UnhookWindowsHookEx(_hookId);
+                _hookId = IntPtr.Zero;
+            }
+        }
+        catch {}
+    }
+
+    private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
+    {
+        if (nCode >= 0 && (wParam == (IntPtr)WM_KEYDOWN || wParam == (IntPtr)WM_SYSKEYDOWN))
+        {
+            int vkCode = Marshal.ReadInt32(lParam);
+            if (vkCode == (int)Keys.F11)
+            {
+                if (IsHandleCreated && !IsDisposed)
+                {
+                    BeginInvoke(new Action(() => ToggleOverlay()));
+                }
+            }
+        }
+        return CallNextHookEx(_hookId, nCode, wParam, lParam);
+    }
+
     public void ToggleOverlay()
     {
         if (IsDisposed || Handle == IntPtr.Zero) return;
@@ -322,6 +392,8 @@ public sealed class GameOverlayForm : Form
             }
 
             Show();
+            BringToFront();
+            try { SetForegroundWindow(Handle); } catch {}
 
             // Unclip cursor and show it so mouse moves freely
             try
@@ -360,6 +432,12 @@ public sealed class GameOverlayForm : Form
         catch {}
 
         Hide();
+
+        // Restore focus to game window
+        if (_lastGameHwnd != IntPtr.Zero && _lastGameHwnd != new IntPtr(1) && IsWindow(_lastGameHwnd))
+        {
+            try { SetForegroundWindow(_lastGameHwnd); } catch {}
+        }
     }
 
     private void OnSyncTimerTick(object? sender, EventArgs e)
@@ -380,7 +458,10 @@ public sealed class GameOverlayForm : Form
             return;
         }
 
-        // 3. If overlay is open, verify game window/process is still alive
+        // 3. Keep overlay topmost on screen
+        SetWindowPos(Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+
+        // 4. If overlay is open, verify game window/process is still alive
         IntPtr gameHwnd = FindGameWindow();
 
         if (gameHwnd == IntPtr.Zero)
@@ -400,7 +481,7 @@ public sealed class GameOverlayForm : Form
             }
         }
 
-        // 4. Sample real audio peak from Windows default playback device and drive 5 reactive bars
+        // 5. Sample real audio peak from Windows default playback device and drive 5 reactive bars
         try
         {
             _audioTick++;
