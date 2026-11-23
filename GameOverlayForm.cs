@@ -35,6 +35,8 @@ public sealed class GameOverlayForm : Form
 
     private const int WM_MOUSEACTIVATE = 0x0021;
     private const int MA_NOACTIVATE = 3;
+    private const int WM_HOTKEY = 0x0312;
+    private const int HOTKEY_F11_ID = 0xF011;
 
     private const byte VK_VOLUME_DOWN = 0xAE;
     private const byte VK_VOLUME_UP = 0xAF;
@@ -97,6 +99,15 @@ public sealed class GameOverlayForm : Form
 
     [DllImport("user32.dll")]
     private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+
+    [DllImport("user32.dll")]
+    private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
     #endregion
 
     protected override bool ShowWithoutActivation => true;
@@ -138,11 +149,20 @@ public sealed class GameOverlayForm : Form
             }
         };
 
+        // Start polling timers immediately so hotkeys and sync are responsive before webview completes init
+        _syncTimer.Start();
+        _mediaPollTimer.Start();
+
         InitializeOverlayAsync();
     }
 
     protected override void WndProc(ref Message m)
     {
+        if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == HOTKEY_F11_ID)
+        {
+            ToggleOverlay();
+            return;
+        }
         if (m.Msg == WM_MOUSEACTIVATE)
         {
             // Crucial: deliver clicks to WebView2 without deactivating the game window!
@@ -164,6 +184,13 @@ public sealed class GameOverlayForm : Form
 
         try
         {
+            // Register global F11 hotkey as fallback for GetAsyncKeyState
+            RegisterHotKey(Handle, HOTKEY_F11_ID, 0, (uint)Keys.F11);
+        }
+        catch {}
+
+        try
+        {
             // DWM glass extension for true hardware transparency
             MARGINS margins = new MARGINS { cxLeftWidth = -1, cxRightWidth = -1, cyTopHeight = -1, cyBottomHeight = -1 };
             DwmExtendFrameIntoClientArea(Handle, ref margins);
@@ -172,6 +199,16 @@ public sealed class GameOverlayForm : Form
 
         // By default on startup, overlay is CLOSED and COMPLETELY HIDDEN
         SetWindowPos(Handle, IntPtr.Zero, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE | SWP_HIDEWINDOW);
+    }
+
+    protected override void OnHandleDestroyed(EventArgs e)
+    {
+        try
+        {
+            UnregisterHotKey(Handle, HOTKEY_F11_ID);
+        }
+        catch {}
+        base.OnHandleDestroyed(e);
     }
 
     protected override CreateParams CreateParams
@@ -262,23 +299,26 @@ public sealed class GameOverlayForm : Form
         {
             // Try to open overlay
             IntPtr gameHwnd = FindGameWindow();
-            if (gameHwnd == IntPtr.Zero || !IsWindow(gameHwnd) || !IsWindowVisible(gameHwnd) || IsIconic(gameHwnd))
+            if (gameHwnd == IntPtr.Zero)
             {
-                // Game is not running -> DO NOT OPEN
+                // Game process is not running
                 return;
             }
 
             _isOpen = true;
             _lastGameHwnd = gameHwnd;
 
-            if (GetWindowRect(gameHwnd, out RECT rect) && rect.Width > 100 && rect.Height > 100)
+            if (gameHwnd != new IntPtr(1) && GetWindowRect(gameHwnd, out RECT rect) && rect.Width > 100 && rect.Height > 100)
             {
                 SetBounds(rect.Left, rect.Top, rect.Width, rect.Height);
-                SetWindowPos(Handle, HWND_TOPMOST, rect.Left, rect.Top, rect.Width, rect.Height, SWP_SHOWWINDOW | SWP_NOACTIVATE);
+                SetWindowPos(Handle, HWND_TOPMOST, rect.Left, rect.Top, rect.Width, rect.Height, SWP_SHOWWINDOW);
             }
             else
             {
-                SetWindowPos(Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_SHOWWINDOW | SWP_NOACTIVATE);
+                // Fallback to primary screen bounds (e.g. exclusive fullscreen game)
+                var screen = Screen.PrimaryScreen?.Bounds ?? new Rectangle(0, 0, 1920, 1080);
+                SetBounds(screen.Left, screen.Top, screen.Width, screen.Height);
+                SetWindowPos(Handle, HWND_TOPMOST, screen.Left, screen.Top, screen.Width, screen.Height, SWP_SHOWWINDOW);
             }
 
             Show();
@@ -340,18 +380,18 @@ public sealed class GameOverlayForm : Form
             return;
         }
 
-        // 3. If overlay is open, verify game window is still alive and visible
+        // 3. If overlay is open, verify game window/process is still alive
         IntPtr gameHwnd = FindGameWindow();
 
-        if (gameHwnd == IntPtr.Zero || !IsWindow(gameHwnd) || !IsWindowVisible(gameHwnd) || IsIconic(gameHwnd))
+        if (gameHwnd == IntPtr.Zero)
         {
-            // Game closed or minimized -> close overlay immediately
+            // Game closed -> close overlay immediately
             CloseOverlay();
             return;
         }
 
         // Only update overlay position if game window moved/resized
-        if (GetWindowRect(gameHwnd, out RECT rect) && rect.Width > 100 && rect.Height > 100)
+        if (gameHwnd != new IntPtr(1) && GetWindowRect(gameHwnd, out RECT rect) && rect.Width > 100 && rect.Height > 100)
         {
             if (Left != rect.Left || Top != rect.Top || Width != rect.Width || Height != rect.Height)
             {
@@ -385,9 +425,27 @@ public sealed class GameOverlayForm : Form
 
     private IntPtr FindGameWindow()
     {
+        // 0. Instant check: Is foreground window currently the game?
+        try
+        {
+            IntPtr fg = GetForegroundWindow();
+            if (fg != IntPtr.Zero && IsWindow(fg) && IsWindowVisible(fg) && !IsIconic(fg))
+            {
+                GetWindowThreadProcessId(fg, out uint fgPid);
+                var fgProc = Process.GetProcessById((int)fgPid);
+                string fgName = fgProc.ProcessName.ToLowerInvariant();
+                if (fgName == "motion" || fgName == "gta_sa" || fgName == "samp")
+                {
+                    return fg;
+                }
+            }
+        }
+        catch {}
+
         // 1. Process search: motion.exe, gta_sa.exe, samp.exe
         string[] targetProcessNames = new[] { "motion", "gta_sa", "samp" };
         var pids = new HashSet<uint>();
+        bool hasRunningGameProcess = false;
 
         foreach (var name in targetProcessNames)
         {
@@ -396,6 +454,7 @@ public sealed class GameOverlayForm : Form
                 var procs = Process.GetProcessesByName(name);
                 foreach (var p in procs)
                 {
+                    hasRunningGameProcess = true;
                     pids.Add((uint)p.Id);
                     if (p.MainWindowHandle != IntPtr.Zero && IsWindow(p.MainWindowHandle) && IsWindowVisible(p.MainWindowHandle) && !IsIconic(p.MainWindowHandle))
                     {
@@ -442,6 +501,12 @@ public sealed class GameOverlayForm : Form
 
         hwnd = FindWindow(null, "Motion");
         if (hwnd != IntPtr.Zero && IsWindow(hwnd) && IsWindowVisible(hwnd) && !IsIconic(hwnd)) return hwnd;
+
+        // 4. If game process is running in memory (e.g. exclusive fullscreen D3D9/DXVK), return special token
+        if (hasRunningGameProcess)
+        {
+            return new IntPtr(1);
+        }
 
         return IntPtr.Zero;
     }

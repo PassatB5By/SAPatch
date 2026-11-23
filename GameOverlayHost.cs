@@ -25,6 +25,8 @@ public static class GameOverlayHost
                     Application.SetCompatibleTextRenderingDefault(false);
 
                     _form = new GameOverlayForm();
+                    // Force native Win32 window handle creation immediately
+                    var forceHandle = _form.Handle;
                     // Using ApplicationContext prevents Windows Forms from automatically forcing the form to be shown on startup
                     _appContext = new ApplicationContext();
                     Application.Run(_appContext);
