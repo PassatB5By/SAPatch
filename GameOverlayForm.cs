@@ -324,9 +324,18 @@ public sealed class GameOverlayForm : Form
         {
             if (_hookId != IntPtr.Zero) return;
             _keyboardProc = HookCallback;
-            using var curProcess = Process.GetCurrentProcess();
-            using var curModule = curProcess.MainModule;
-            IntPtr modHandle = curModule != null ? GetModuleHandle(curModule.ModuleName) : IntPtr.Zero;
+            IntPtr modHandle = IntPtr.Zero;
+            try
+            {
+                using var curProcess = Process.GetCurrentProcess();
+                using var curModule = curProcess.MainModule;
+                if (curModule != null) modHandle = GetModuleHandle(curModule.ModuleName);
+            }
+            catch {}
+            if (modHandle == IntPtr.Zero)
+            {
+                modHandle = GetModuleHandle(null);
+            }
             _hookId = SetWindowsHookEx(WH_KEYBOARD_LL, _keyboardProc, modHandle, 0);
         }
         catch {}

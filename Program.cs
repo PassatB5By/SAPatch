@@ -111,15 +111,35 @@ public class Program
             {
                 try
                 {
-                    IntPtr existingWnd = FindWindow(null, "SAPatcher");
+                    IntPtr existingWnd = FindWindow(null, "SAPatcher 2.0");
+                    if (existingWnd == IntPtr.Zero) existingWnd = FindWindow(null, "SAPatcher");
                     if (existingWnd != IntPtr.Zero)
                     {
                         ShowWindow(existingWnd, SW_RESTORE);
                         SetForegroundWindow(existingWnd);
+                        return;
+                    }
+                    else
+                    {
+                        // An orphaned headless or locked background instance was detected.
+                        // Terminate orphaned SAPatcher processes so the user can always launch cleanly.
+                        foreach (var p in Process.GetProcessesByName("SAPatcher"))
+                        {
+                            if (p.Id != Environment.ProcessId)
+                            {
+                                try { p.Kill(); } catch {}
+                            }
+                        }
+                        Thread.Sleep(200);
+                        try
+                        {
+                            appMutex?.Dispose();
+                            appMutex = new Mutex(true, SingleInstanceMutexName, out isNewInstance);
+                        }
+                        catch {}
                     }
                 }
                 catch {}
-                return;
             }
 
             string localApp = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
