@@ -17,7 +17,8 @@ public sealed class GameOverlayForm : Form
     private readonly System.Windows.Forms.Timer _syncTimer;
     private readonly System.Windows.Forms.Timer _mediaPollTimer;
     private bool _isOpen = false;
-    private bool _wasF11Down = false;
+    private bool _isF11Held = false;
+    private long _lastToggleTick = 0;
     private IntPtr _lastGameHwnd = IntPtr.Zero;
     private int _audioTick = 0;
 
@@ -31,16 +32,12 @@ public sealed class GameOverlayForm : Form
 
     private const int WS_EX_TOPMOST = 0x00000008;
     private const int WS_EX_TOOLWINDOW = 0x00000080;
-    private const int WS_EX_NOACTIVATE = 0x08000000;
-
-    private const int WM_MOUSEACTIVATE = 0x0021;
-    private const int MA_NOACTIVATE = 3;
-    private const int WM_HOTKEY = 0x0312;
-    private const int HOTKEY_F11_ID = 0xF011;
 
     private const int WH_KEYBOARD_LL = 13;
     private const int WM_KEYDOWN = 0x0100;
+    private const int WM_KEYUP = 0x0101;
     private const int WM_SYSKEYDOWN = 0x0104;
+    private const int WM_SYSKEYUP = 0x0105;
 
     private static LowLevelKeyboardProc? _keyboardProc;
     private static IntPtr _hookId = IntPtr.Zero;
@@ -116,10 +113,13 @@ public sealed class GameOverlayForm : Form
     private static extern bool SetForegroundWindow(IntPtr hWnd);
 
     [DllImport("user32.dll")]
-    private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+    private static extern bool BringWindowToTop(IntPtr hWnd);
 
     [DllImport("user32.dll")]
-    private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+    private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+
+    [DllImport("kernel32.dll")]
+    private static extern uint GetCurrentThreadId();
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
@@ -134,7 +134,7 @@ public sealed class GameOverlayForm : Form
     private static extern IntPtr GetModuleHandle(string? lpModuleName);
     #endregion
 
-    protected override bool ShowWithoutActivation => true;
+    protected override bool ShowWithoutActivation => !_isOpen;
 
     public GameOverlayForm()
     {
@@ -173,29 +173,11 @@ public sealed class GameOverlayForm : Form
             }
         };
 
-        // Start polling timers immediately so hotkeys and sync are responsive before webview completes init
+        // Start polling timers immediately so audio bars and sync are responsive before webview completes init
         _syncTimer.Start();
         _mediaPollTimer.Start();
 
-        InstallKeyboardHook();
-
         InitializeOverlayAsync();
-    }
-
-    protected override void WndProc(ref Message m)
-    {
-        if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == HOTKEY_F11_ID)
-        {
-            ToggleOverlay();
-            return;
-        }
-        if (m.Msg == WM_MOUSEACTIVATE)
-        {
-            // Crucial: deliver clicks to WebView2 without deactivating the game window!
-            m.Result = (IntPtr)MA_NOACTIVATE;
-            return;
-        }
-        base.WndProc(ref m);
     }
 
     protected override void SetVisibleCore(bool value)
@@ -208,12 +190,7 @@ public sealed class GameOverlayForm : Form
     {
         base.OnHandleCreated(e);
 
-        try
-        {
-            // Register global F11 hotkey as fallback for GetAsyncKeyState
-            RegisterHotKey(Handle, HOTKEY_F11_ID, 0, (uint)Keys.F11);
-        }
-        catch {}
+        InstallKeyboardHook();
 
         try
         {
@@ -229,11 +206,6 @@ public sealed class GameOverlayForm : Form
 
     protected override void OnHandleDestroyed(EventArgs e)
     {
-        try
-        {
-            UnregisterHotKey(Handle, HOTKEY_F11_ID);
-        }
-        catch {}
         UninstallKeyboardHook();
         base.OnHandleDestroyed(e);
     }
@@ -356,23 +328,71 @@ public sealed class GameOverlayForm : Form
 
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
-        if (nCode >= 0 && (wParam == (IntPtr)WM_KEYDOWN || wParam == (IntPtr)WM_SYSKEYDOWN))
+        if (nCode >= 0)
         {
             int vkCode = Marshal.ReadInt32(lParam);
-            if (vkCode == (int)Keys.F11)
+            int targetVk = SettingsManager.Current.OverlayHotkeyCode > 0 ? SettingsManager.Current.OverlayHotkeyCode : (int)Keys.F11;
+            if (vkCode == targetVk)
             {
-                if (IsHandleCreated && !IsDisposed)
+                if (wParam == (IntPtr)WM_KEYDOWN || wParam == (IntPtr)WM_SYSKEYDOWN)
                 {
-                    BeginInvoke(new Action(() => ToggleOverlay()));
+                    if (!_isF11Held)
+                    {
+                        _isF11Held = true;
+                        if (IsHandleCreated && !IsDisposed)
+                        {
+                            BeginInvoke(new Action(() => ToggleOverlay()));
+                        }
+                    }
+                }
+                else if (wParam == (IntPtr)WM_KEYUP || wParam == (IntPtr)WM_SYSKEYUP)
+                {
+                    _isF11Held = false;
                 }
             }
         }
         return CallNextHookEx(_hookId, nCode, wParam, lParam);
     }
 
+    private static void ForceWindowToForeground(IntPtr targetHwnd)
+    {
+        if (targetHwnd == IntPtr.Zero || !IsWindow(targetHwnd)) return;
+        try
+        {
+            IntPtr fgWnd = GetForegroundWindow();
+            uint curThread = GetCurrentThreadId();
+            uint fgThread = fgWnd != IntPtr.Zero ? GetWindowThreadProcessId(fgWnd, out _) : 0;
+            if (fgThread != 0 && fgThread != curThread)
+            {
+                AttachThreadInput(fgThread, curThread, true);
+                SetWindowPos(targetHwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+                BringWindowToTop(targetHwnd);
+                SetForegroundWindow(targetHwnd);
+                AttachThreadInput(fgThread, curThread, false);
+            }
+            else
+            {
+                SetWindowPos(targetHwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+                BringWindowToTop(targetHwnd);
+                SetForegroundWindow(targetHwnd);
+            }
+        }
+        catch {}
+    }
+
     public void ToggleOverlay()
     {
         if (IsDisposed || Handle == IntPtr.Zero) return;
+
+        long now = Environment.TickCount64;
+        if (now - _lastToggleTick < 250) return;
+        _lastToggleTick = now;
+
+        if (!SettingsManager.Current.OverlayEnabled)
+        {
+            if (_isOpen) CloseOverlay();
+            return;
+        }
 
         if (!_isOpen)
         {
@@ -390,19 +410,16 @@ public sealed class GameOverlayForm : Form
             if (gameHwnd != new IntPtr(1) && GetWindowRect(gameHwnd, out RECT rect) && rect.Width > 100 && rect.Height > 100)
             {
                 SetBounds(rect.Left, rect.Top, rect.Width, rect.Height);
-                SetWindowPos(Handle, HWND_TOPMOST, rect.Left, rect.Top, rect.Width, rect.Height, SWP_SHOWWINDOW);
             }
             else
             {
-                // Fallback to primary screen bounds (e.g. exclusive fullscreen game)
                 var screen = Screen.PrimaryScreen?.Bounds ?? new Rectangle(0, 0, 1920, 1080);
                 SetBounds(screen.Left, screen.Top, screen.Width, screen.Height);
-                SetWindowPos(Handle, HWND_TOPMOST, screen.Left, screen.Top, screen.Width, screen.Height, SWP_SHOWWINDOW);
             }
 
             Show();
-            BringToFront();
-            try { SetForegroundWindow(Handle); } catch {}
+            ForceWindowToForeground(Handle);
+            try { _webView?.Focus(); } catch {}
 
             // Unclip cursor and show it so mouse moves freely
             try
@@ -442,35 +459,25 @@ public sealed class GameOverlayForm : Form
 
         Hide();
 
-        // Restore focus to game window
+        // Restore focus to game window cleanly
         if (_lastGameHwnd != IntPtr.Zero && _lastGameHwnd != new IntPtr(1) && IsWindow(_lastGameHwnd))
         {
-            try { SetForegroundWindow(_lastGameHwnd); } catch {}
+            ForceWindowToForeground(_lastGameHwnd);
         }
     }
 
     private void OnSyncTimerTick(object? sender, EventArgs e)
     {
-        // 1. Check F11 Hotkey globally with debounce
-        short f11State = GetAsyncKeyState((int)Keys.F11);
-        bool isF11Down = (f11State & 0x8000) != 0;
-
-        if (isF11Down && !_wasF11Down)
-        {
-            ToggleOverlay();
-        }
-        _wasF11Down = isF11Down;
-
-        // 2. If overlay is closed, ensure it stays completely hidden and do nothing else
+        // 1. If overlay is closed, ensure it stays completely hidden
         if (!_isOpen)
         {
             return;
         }
 
-        // 3. Keep overlay topmost on screen
+        // 2. Keep overlay topmost while open
         SetWindowPos(Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 
-        // 4. If overlay is open, verify game window/process is still alive
+        // 3. Verify game process is still alive
         IntPtr gameHwnd = FindGameWindow();
 
         if (gameHwnd == IntPtr.Zero)
@@ -480,7 +487,7 @@ public sealed class GameOverlayForm : Form
             return;
         }
 
-        // Only update overlay position if game window moved/resized
+        // 4. Only update overlay position if game window moved/resized
         if (gameHwnd != new IntPtr(1) && GetWindowRect(gameHwnd, out RECT rect) && rect.Width > 100 && rect.Height > 100)
         {
             if (Left != rect.Left || Top != rect.Top || Width != rect.Width || Height != rect.Height)
