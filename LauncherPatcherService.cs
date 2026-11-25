@@ -500,7 +500,7 @@ public static class LauncherPatcherService
             info.Version = parsed;
             var norm = new Version(parsed.Major, parsed.Minor, Math.Max(0, parsed.Build), Math.Max(0, parsed.Revision));
             var minVer = new Version(1, 2, 46, 0);
-            var maxTestedVer = new Version(2, 0, 0, 0);
+            var maxTestedVer = new Version(2, 0, 1, 0);
 
             if (norm < minVer)
             {
@@ -510,7 +510,7 @@ public static class LauncherPatcherService
             else if (norm > maxTestedVer)
             {
                 info.HasCompatibilityWarning = true;
-                info.WarningMessage = $"Внимание: версия лаунчера ({rawVer}) новее протестированных (1.2.46 и 2.0.0.0). Возможны проблемы совместимости!";
+                info.WarningMessage = $"Внимание: версия лаунчера ({rawVer}) новее протестированных (1.2.46, 2.0.0.0 и 2.0.1.0). Возможны проблемы совместимости!";
             }
         }
         else
@@ -888,6 +888,12 @@ public static class LauncherPatcherService
                 }
             }
 
+            string apiCompatVer = verInfo.IsV2OrHigher
+                ? (verInfo.Version != null && verInfo.Version >= new Version(2, 0, 1)
+                    ? $"{verInfo.Version.Major}.{verInfo.Version.Minor}.{Math.Max(0, verInfo.Version.Build)}"
+                    : "2.0.0")
+                : "1.2.46";
+
             string packageJsonPath = Path.Combine(appFolder, "package.json");
             if (File.Exists(packageJsonPath))
             {
@@ -896,8 +902,9 @@ public static class LauncherPatcherService
                     string pkgContent = File.ReadAllText(packageJsonPath, Encoding.UTF8);
                     if (verInfo.IsV2OrHigher)
                     {
-                        pkgContent = pkgContent.Replace("\"version\": \"2.0.0-SAPatcher\"", "\"version\": \"2.0.0\"");
-                        logs.Add($"[VERSION] Сохранена базовая совместимость с API сервера: 2.0.0");
+                        pkgContent = pkgContent.Replace($"\"version\": \"{apiCompatVer}-SAPatcher\"", $"\"version\": \"{apiCompatVer}\"");
+                        pkgContent = pkgContent.Replace("\"version\": \"2.0.0-SAPatcher\"", $"\"version\": \"{apiCompatVer}\"");
+                        logs.Add($"[VERSION] Сохранена базовая совместимость с API сервера: {apiCompatVer}");
                     }
                     else
                     {
@@ -918,20 +925,24 @@ public static class LauncherPatcherService
                 string content = File.ReadAllText(mainJsPath, Encoding.UTF8);
                 content = StripGuard(content);
 
+                // Self-heal broken strict-mode globals from earlier patch attempts
+                content = content.Replace(";_orig_applyDxvkLatch=function", ";t._orig_applyDxvkLatch=function");
+                content = content.Replace(";_orig_isDxvkDllBlocked=function", ";t._orig_isDxvkDllBlocked=function");
+
                 if (verInfo.IsV2OrHigher)
                 {
-                    // 2.0.0 Versioning
+                    // 2.0.0 / 2.0.1 Versioning
                     content = content.Replace(
                         "f.ipcMain.handle(\"getVersion\",()=>f.app.isPackaged?f.app.getVersion():\"DEV\")",
-                        "f.ipcMain.handle(\"getVersion\",()=>\"2.0.0-SAPatcher\")"
+                        $"f.ipcMain.handle(\"getVersion\",()=>\"{apiCompatVer}-SAPatcher\")"
                     );
 
                     content = content.Replace(
                         "{version:l.app.getVersion()}",
-                        "{version:\"2.0.0\"}"
+                        $"{{version:\"{apiCompatVer}\"}}"
                     );
 
-                    // 2.0.0 Settings Lock
+                    // 2.0.0 / 2.0.1 Settings Lock
                     content = content.Replace(
                         "getGraphicsMode(){const e=this.store.get(\"graphicsMode\",\"standard\"),t=\"directX_high\"===e?\"directX_med\":e;return(0,h.isGraphicsMode)(t)?t:\"standard\"}",
                         "getGraphicsMode(){return\"standard\"}"
@@ -969,6 +980,10 @@ public static class LauncherPatcherService
                     content = content.Replace(
                         "hideWindow(){this.window.hide()}",
                         "hideWindow(){}"
+                    );
+                    content = content.Replace(
+                        "case\"graphicsMode\":try{if(this.operationManager.isBusy())",
+                        "case\"graphicsMode\":try{if(\"standard\"!==e.mode)return this.main.pushToast(\"Доступна только стандартная графика (SAPatcher)\",\"error\"),!1;if(this.operationManager.isBusy())"
                     );
                     content = content.Replace(
                         "case\"graphicsMode\":if(this.operationManager.isBusy())",
@@ -1015,12 +1030,17 @@ public static class LauncherPatcherService
 
                     content = content.Replace(
                         "t.applyDxvkLatch=function(e,t){if(!(null==t?void 0:t.latched))return{manifest:e,allBlocked:!1};",
-                        "t.applyDxvkLatch=function(e,t){return{manifest:e,allBlocked:!1}};_orig_applyDxvkLatch=function(e,t){if(!(null==t?void 0:t.latched))return{manifest:e,allBlocked:!1};"
+                        "t.applyDxvkLatch=function(e,t){return{manifest:e,allBlocked:!1}};t._orig_applyDxvkLatch=function(e,t){if(!(null==t?void 0:t.latched))return{manifest:e,allBlocked:!1};"
                     );
 
                     content = content.Replace(
                         "t.isDxvkDllBlocked=function(e,t){if(!(null==e?void 0:e.latched))return!1;",
-                        "t.isDxvkDllBlocked=function(e,t){return!1};_orig_isDxvkDllBlocked=function(e,t){if(!(null==e?void 0:e.latched))return!1;"
+                        "t.isDxvkDllBlocked=function(e,t){return!1};t._orig_isDxvkDllBlocked=function(e,t){if(!(null==e?void 0:e.latched))return!1;"
+                    );
+
+                    content = content.Replace(
+                        "t.DXVK_CONFIG=Buffer.from(\"d3d9.countLosableResources = False\\r\\nd3d9.textureMemory = 64\",\"utf8\")",
+                        "t.DXVK_CONFIG=Buffer.from(\"# Managed by SAPatcher\\r\\n\",\"utf8\")"
                     );
 
                     content = content.Replace(
@@ -1029,11 +1049,21 @@ public static class LauncherPatcherService
                     );
 
                     content = content.Replace(
+                        "return this.ignoredRelativePaths.has(n)||(0,E.isPreservedGameFile)(t)",
+                        "return this.ignoredRelativePaths.has(n)||n.includes(\"d3d9.dll\")||n.includes(\"dxvk.conf\")||n.includes(\"d3d9.dis\")||n.includes(\"sapatcher\")||(0,E.isPreservedGameFile)(t)"
+                    );
+
+                    content = content.Replace(
+                        "t.isPreservedGameFile=function(e){const t=\"/\"+e.replace(/\\\\/g,\"/\").toLowerCase();return t.endsWith(\".log\")",
+                        "t.isPreservedGameFile=function(e){const t=\"/\"+e.replace(/\\\\/g,\"/\").toLowerCase();return t.includes(\"d3d9.dll\")||t.includes(\"dxvk.conf\")||t.includes(\"d3d9.dis\")||t.includes(\"sapatcher\")||t.endsWith(\".log\")"
+                    );
+
+                    content = content.Replace(
                         "!t.includes(\"fastload.asi\");",
                         "!t.includes(\"sapatcher\")&&!t.endsWith(\".log\")&&!t.includes(\"dxvk.conf\")&&!t.includes(\"fastload.asi\");"
                     );
 
-                    logs.Add($"[DXVK_CUT] Нативная подсистема DXVK 2.0.0 вырезана (скачивание, vkprobe32, d3d9smoke32 и блокировки нейтрализованы).");
+                    logs.Add($"[DXVK_CUT] Нативная подсистема DXVK {apiCompatVer} вырезана (скачивание, vkprobe32, d3d9smoke32 и блокировки нейтрализованы).");
                 }
                 else
                 {
@@ -1171,15 +1201,22 @@ public static class LauncherPatcherService
                 return result;
             }
 
-            string dxvkConfInResources = Path.Combine(resourcesDir, "dxvk", "dxvk.conf");
-            if (File.Exists(dxvkConfInResources))
+            string[] dxvkConfs = new[]
             {
-                try
+                Path.Combine(resourcesDir, "dxvk", "dxvk.conf"),
+                Path.Combine(appFolder, "dist", "assets", "dxvk", "dxvk.conf")
+            };
+            foreach (var dxvkConfPath in dxvkConfs)
+            {
+                if (File.Exists(dxvkConfPath))
                 {
-                    File.WriteAllText(dxvkConfInResources, "# Neutralized by SAPatcher - DXVK managed by SAPatcher\r\n", new UTF8Encoding(false));
-                    logs.Add($"[DXVK_CONF] Конфигурация resources/dxvk/dxvk.conf очищена от d3d9.textureMemory = 64.");
+                    try
+                    {
+                        File.WriteAllText(dxvkConfPath, "# Neutralized by SAPatcher - DXVK managed by SAPatcher\r\n", new UTF8Encoding(false));
+                        logs.Add($"[DXVK_CONF] Конфигурация {Path.GetFileName(Path.GetDirectoryName(dxvkConfPath))}/dxvk.conf очищена от d3d9.textureMemory = 64.");
+                    }
+                    catch {}
                 }
-                catch {}
             }
 
             SetupAndApplyUiThemes(appFolder, SettingsManager.Current.MotionLauncherUiTheme, logs);
